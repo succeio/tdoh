@@ -1,5 +1,7 @@
 <script setup>
+
 import MainHeader from './components/mainHeader.vue';
+import SendData from './components/sendData.vue';
 
 </script>
 
@@ -9,6 +11,7 @@ import MainHeader from './components/mainHeader.vue';
 
     <MainHeader class="" />
 
+    <SendData />
 
   </div>
 </div>
