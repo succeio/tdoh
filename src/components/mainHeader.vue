@@ -25,7 +25,7 @@ const setBoardState = (board) => {
 <header class="flex justify-between border-b border-slate-100 p-2 dark:border-twitch">
   <div class="flex items-center gap-4">
     <div class="">
-      <h2 @click="setBoardState([])"  class="text-xl font-bold hover:text-white p-1 hover:bg-black cursor-pointer dark:text-white dark:hover:text-twitch">tdoh lab.</h2>
+      <h2 @click="setBoardState('')"  class="text-xl font-bold hover:text-white p-1 hover:bg-black cursor-pointer dark:text-white dark:hover:text-twitch">tdoh lab.</h2>
       <p class="text-slate-300 ml-1 mb-1">board</p> 
       
       <DarkModeSwitcher />
