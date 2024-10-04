@@ -1,367 +1,207 @@
 <script setup>
-import { ref, onMounted, watch } from 'vue';
-import { database } from '../firebase';
-import { ref as dbRef, push, set, onValue } from 'firebase/database';
+import { ref, inject } from 'vue'
+import { database } from '../firebase'
+import { ref as dbRef, push, set } from 'firebase/database'
+
+const fetchPosts = inject('fetchPosts')
+
+const postName = ref('')
+const postTheme = ref('')
+const postText = ref('')
+const postUrl = ref('')
+const postPassword = ref('')
+
+const hashedString = ref('')
 
 const threadState = ref('')
 const boardState = ref('')
 
-const postName = ref('')
-const postTheme = ref('')
-
-const CreateNewThread = async () => {
-  threadState.value = localStorage.getItem('threadState') ? JSON.parse(localStorage.getItem('threadState')) : ''
-  boardState.value = localStorage.getItem('boardState') ? JSON.parse(localStorage.getItem('boardState')) : null
-  
-  //я собираю из полей данные в объект
-  const newPost = {
-    name: postName.value,
-    theme: postTheme.value
-  } 
-
+const sendPost = async () => {
   try {
-    console.log(newPost)
-    onMounted()
-    watch()
-    database
-    dbRef
-    push
-    set
-    onValue
-    
-  } catch (error) {console.log(error)}
+    threadState.value = localStorage.getItem('threadState')
+      ? localStorage.getItem('threadState')
+      : localStorage.setItem('threadState', '')
+    boardState.value = localStorage.getItem('boardState')
+      ? localStorage.getItem('boardState')
+      : localStorage.setItem('boardState', '')
+
+    if (threadState.value && boardState.value) {
+      const postId = push(dbRef(database, `${boardState.value}/${threadState.value}`)).key // Генерация уникального ID
+
+      hashedString.value = await hashString(postPassword.value)
+      const newPost = {
+        name: postName.value ? postName.value : 'Аноним',
+        password: postPassword.value ? hashedString.value : '',
+        theme: postTheme.value,
+        text: postText.value,
+        url: postUrl.value,
+        time: new Date().toLocaleTimeString('ru-RU', {
+          timeZone: 'Europe/Moscow',
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit'
+        }),
+        data: new Date().toLocaleDateString(),
+        day: ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'][new Date().getDay()],
+        postId: postId,
+        threadId: threadState.value
+      }
+
+      await set(dbRef(database, `${boardState.value}/${threadState.value}/${postId}`), newPost)
+
+      postText.value = ''
+      postUrl.value = ''
+      postTheme.value = ''
+
+      setTimeout(() => {
+        window.scrollTo({
+          top: document.body.scrollHeight,
+          behavior: 'smooth'
+        })
+      }, 100)
+    } else if (boardState.value) {
+      const threadId = push(dbRef(database, 'threads')).key // Генерация уникального ID
+      const postId = push(dbRef(database, `${boardState.value}/${threadId}`)).key // Генерация уникального ID
+
+      hashedString.value = await hashString(postPassword.value)
+      const newPost = {
+        name: postName.value ? postName.value : 'Аноним',
+        password: postPassword.value ? hashedString.value : '',
+        theme: postTheme.value,
+        text: postText.value,
+        url: postUrl.value,
+        time: new Date().toLocaleTimeString('ru-RU', {
+          timeZone: 'Europe/Moscow',
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit'
+        }),
+        data: new Date().toLocaleDateString(),
+        day: ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'][new Date().getDay()],
+        postId: postId,
+        threadId: threadId
+      }
+
+      //      const boardId = push(dbRef(database, 'boards')).key
+      //      boardState.value = boardId
+      //      localStorage.setItem('boardState', boardId)
+
+      await set(dbRef(database, `${boardState.value}/${threadId}/${postId}`), newPost)
+
+      postText.value = ''
+      postUrl.value = ''
+      postTheme.value = ''
+
+      localStorage.setItem('threadState', threadId)
+      threadState.value = threadId
+      fetchPosts()
+    } else {
+      console.log('Раздел не выбран')
+    }
+  } catch (error) {
+    console.error(error)
+  }
 }
 
-    // Запись сообщения в узел 'posts' с использованием push()
-    // реактианя переменная не обновляется
+// Функция для полной загрузки данных onValue
+// const fetchPosts1 = () => {
+//   threadState.value = localStorage.getItem('threadState')
+//     ? localStorage.getItem('threadState')
+//     : localStorage.setItem('threadState', '')
+//   boardState.value = localStorage.getItem('boardState')
+//     ? localStorage.getItem('boardState')
+//     : localStorage.setItem('boardState', '')
 
-    // const postRef = await push(dbRef(database, 'posts'), newPost)
-    // console.log("Пост успешно добавлен с ID:", postRef.key)
+//   const postsRef = dbRef(database, `${boardState.value}/${threadState.value}/`)
 
-    // //если в хранилище есть данные, то мы в треде и отправляем ссылку на пост в этот тред
-    // if (threadState.value) {
-    //   console.log(threadState.value)
-    //   const pushInThreadRef = await push(dbRef(database, 'threads/' + threadState.value), postRef.key)
-    //   console.log("pushInThreadRef отработал с ID:", pushInThreadRef.key)
-    // } else {
-    //   //если пустой, то создается новый тред
-    //   //создаю в узле threads новую запись, куда добавляю ссылку на пост
-    //   const newThreadRef = await push(dbRef(database, 'threads'), postRef.key)
-    //   console.log("Тред успешно создан с ID:", newThreadRef.key)
-    //   //я записываю в локальное хранилище состояние созданного треда и его номер
-    //   threadState.value = newThreadRef.key
-    //   localStorage.setItem('threadState', JSON.stringify(threadState.value))
-    // }
-
-    // if (threadState.value[0]) {
-    //   //отрабатывает если тред был создан
-    //   console.log(Boolean(threadState.value[0]))
-    //   const postRef = await push(dbRef(database, 'posts'), newPost)
-    //   await push(dbRef(database, 'threads/' + threadState.value), postRef.key)
-
-    // } else {
-    //   //отрабатывает до создания треда
-    //   const postRef = await push(dbRef(database, 'posts'), newPost)
-    //   const pushInThreadRef = await push(dbRef(database, 'threads/'), postRef.key)
-
-    //   localStorage.setItem('threadState', JSON.stringify(pushInThreadRef.key))
-
-      
-    // }
-
-//     // Проверка на наличие в хранилище данных
-// if (threadState.value && threadState.value[0]) {
-//     // Если тред был создан
-//     console.log(Boolean(threadState.value[0]));
-//     const postRef = await push(dbRef(database, 'posts'), newPost);
-    
-//     // Добавляем идентификатор поста в существующий тред
-//     await push(dbRef(database, 'threads/' + threadState.value), postRef.key);
-//     console.log("Пост добавлен в существующий тред с ID:", postRef.key);
-// } else {
-//     // Если треда нет, создаем новый тред
-//     const postRef = await push(dbRef(database, 'posts'), newPost);
-    
-//     // Создаем новый тред и добавляем идентификатор поста под уникальным ключом
-//     const newThreadRef = await push(dbRef(database, 'threads'), {
-//         [postRef.key]: postRef.key // Сохраняем идентификатор поста под его уникальным ключом
-//     });
-    
-//     console.log("Тред успешно создан с ID:", newThreadRef.key);
-    
-//     // Записываем состояние созданного треда и его номер
-//     threadState.value = newThreadRef.key;
-//     localStorage.setItem('threadState', JSON.stringify(threadState.value));
-// }
-
-//--------------------------- подход с вложением ключ: значение разные
-// // Проверка на наличие в хранилище данных
-// if (threadState.value && threadState.value[0]) {
-//     // Если тред был создан
-//     console.log(Boolean(threadState.value[0]));
-//     const postRef = await push(dbRef(database, 'posts'), newPost);
-    
-//     // Добавляем идентификатор поста в существующий тред
-//     await push(dbRef(database, 'threads/' + threadState.value), postRef.key);
-//     console.log("Пост добавлен в существующий тред с ID:", postRef.key);
-// } else {
-//     // Если треда нет, создаем новый тред
-//     const postRef = await push(dbRef(database, 'posts'), newPost);
-    
-//     // Создаем новый тред и добавляем идентификатор поста под его уникальным ключом
-//     const newThreadRef = await push(dbRef(database, 'threads'), {
-//         [postRef.key]: postRef.key // Сохраняем идентификатор поста под его уникальным ключом
-//     });
-    
-//     console.log("Тред успешно создан с ID:", newThreadRef.key);
-    
-//     // Записываем состояние созданного треда и его номер
-//     threadState.value = newThreadRef.key;
-//     localStorage.setItem('threadState', JSON.stringify(threadState.value));
-
-//     // Добавляем новый тред в раздел board
-//     if (boardState.value) {
-//         await push(dbRef(database, 'board/' + boardState.value), newThreadRef.key);
-//         console.log("Тред добавлен в board с ID:", newThreadRef.key);
+//   onValue(postsRef, (snapshot) => {
+//     const data = snapshot.val()
+//     if (data) {
+//       // Если есть данные, извлекаем посты
+//       posts.value = Object.values(data) // Преобразуем объект постов в массив
 //     } else {
-//         // Если boardState пустой, создаем новый раздел board
-//         const newBoardRef = await push(dbRef(database, 'board'), {
-//             [newThreadRef.key]: newThreadRef.key // Сохраняем идентификатор треда под его уникальным ключом
-//         });
-//         console.log("Раздел board успешно создан с ID:", newBoardRef.key);
+//       posts.value = []
 //     }
+//   })
 // }
 
-//---------------------------------- подход с вложением ключ: значение одинаковые
-// Проверка на наличие в хранилище данных
-// if (threadState.value && threadState.value[0]) {
-//     // Если тред был создан
-//     console.log(Boolean(threadState.value[0]));
-    
-//     // Создаем новый пост
-//     const postRef = await push(dbRef(database, 'posts'), newPost);
-    
-//     // Добавляем идентификатор поста в существующий тред
-//     await set(dbRef(database, `threads/${threadState.value}/${postRef.key}`), postRef.key);
-//     console.log("Пост добавлен в существующий тред с ID:", postRef.key);
-// } else {
-//     // Если треда нет, создаем новый пост
-//     const postRef = await push(dbRef(database, 'posts'), newPost);
-    
-//     // Создаем новый тред и добавляем идентификатор поста
-//     const newThreadRef = await push(dbRef(database, 'threads'), {
-//         [postRef.key]: postRef.key // Сохраняем идентификатор поста под его уникальным ключом
-//     });
-    
-//     console.log("Тред успешно создан с ID:", newThreadRef.key);
-    
-//     // Записываем состояние созданного треда и его номер
-//     threadState.value = newThreadRef.key;
-//     localStorage.setItem('threadState', JSON.stringify(threadState.value));
+// Функция для слежения за добавлением новых постов onChildAdded
 
-//     // Добавляем новый тред в раздел board
-//     if (boardState.value) {
-//         await set(dbRef(database, `board/${boardState.value}/${newThreadRef.key}`), newThreadRef.key);
-//         console.log("Тред добавлен в board с ID:", newThreadRef.key);
-//     } else {
-//         // Если boardState пустой, создаем новый раздел board
-//         const newBoardRef = await push(dbRef(database, 'board'), {
-//             [newThreadRef.key]: newThreadRef.key // Сохраняем идентификатор треда под его уникальным ключом
-//         });
-//         console.log("Раздел board успешно создан с ID:", newBoardRef.key);
-//     }
-// }
+// const watchNewPosts = () => {
+//   const postsRef = dbRef(database, `${boardState.value}/${threadState.value}/`)
 
-//------------------------------------------------ создает пост, создает тред если не создал, создает борду и всё это ссылками
-//Проверка на наличие в хранилище данных
-// if (threadState.value && threadState.value[0]) {
-//     // Если тред был создан
-//     console.log(Boolean(threadState.value[0]));
-    
-//     // Создаем новый пост
-//     const postRef = await push(dbRef(database, 'posts'), newPost);
-    
-//     // Добавляем идентификатор поста в существующий тред
-//     await set(dbRef(database, `threads/${threadState.value}/${postRef.key}`), true); // Используем true как значение
-//     console.log("Пост добавлен в существующий тред с ID:", postRef.key);
-// } else {
-//     // Если треда нет, создаем новый пост
-//     const postRef = await push(dbRef(database, 'posts'), newPost);
-    
-//     // Создаем новый тред и добавляем идентификатор поста
-//     const newThreadRef = await push(dbRef(database, 'threads'), {
-//         [postRef.key]: true // Сохраняем идентификатор поста с значением true
-//     });
-    
-//     console.log("Тред успешно создан с ID:", newThreadRef.key);
-    
-//     // Записываем состояние созданного треда и его номер
-//     threadState.value = newThreadRef.key;
-//     localStorage.setItem('threadState', JSON.stringify(threadState.value));
-
-//     // Добавляем новый тред в раздел board
-//     if (boardState.value) {
-//         await set(dbRef(database, `board/${boardState.value}/${newThreadRef.key}`), true); // Используем true как значение
-//         console.log("Тред добавлен в board с ID:", newThreadRef.key);
-//     } else {
-//         // Если boardState пустой, создаем новый раздел board
-//         const newBoardRef = await push(dbRef(database, 'board'), {
-//             [newThreadRef.key]: true // Сохраняем идентификатор треда с значением true
-//         });
-
-//         boardState.value = newBoardRef.key
-//         localStorage.setItem('boardState', JSON.stringify(boardState.value))
-//         console.log("Раздел board успешно создан с ID:", newBoardRef.key);
-//       }
-//   }
-
-//     postName.value = ''
-//     postTheme.value = ''
-
-//   } catch (error) {
-//     console.error("Ошибка при отправке сообщения: ", error)
-//   }
+//   onChildAdded(postsRef, (snapshot) => {
+//     const newPost = snapshot.val();
+//     posts.value.push(newPost); // Добавляем новый пост в конец массива
+//   });
 // };
 
+// Lifecycle hook: onMounted для загрузки данных при монтировании компонента
+// onMounted(() => {
+//   localStorage.setItem('boardState', '')
+//   localStorage.setItem('threadState', '')
+//      fetchPosts();
+//      watchNewPosts();
+//})
 
+// Lifecycle hook: onUnmounted для удаления слушателей при демонтировании компонента
+// onUnmounted(() => {
+//   // Тут можно добавить код для удаления слушателей при необходимости
+// });
 
+// --------------------
 
-    // const posts = ref([]);
-    // const loading = ref(true);
-    // const error = ref(null);
-  
-    // const threadId = threadState.value[0]; // Получаем ID треда из props
+// onValue(postsRef, (snapshot) => {
+//   const data = snapshot.val()
+//   posts.value = Object.values(data).filter(post => post.threadId === '1')
+// })
 
-    // onMounted(() => {
-    //   const threadRef = dbRef(database, `threads/${threadId}`);
-
-    //   // Получаем посты из треда
-    //   onValue(threadRef, (snapshot) => {
-    //     const threadData = snapshot.val();
-    //     if (threadData) {
-    //       const postIds = Object.keys(threadData);
-    //       fetchPosts(postIds);
-    //     } else {
-    //       error.value = 'Тред не найден или пустой';
-    //       posts.value = [];
-    //       loading.value = false;
-    //     }
-    //   }, (error) => {
-    //     console.error('Ошибка при получении данных треда:', error);
-    //     error.value = 'Ошибка при получении данных треда';
-    //     loading.value = false;
-    //   });
-    // });
-
-    // const fetchPosts = (postIds) => {
-    //   const postsRef = dbRef(database, 'posts');
-    //   onValue(postsRef, (snapshot) => {
-    //     const allPosts = snapshot.val();
-    //     if (allPosts) {
-    //       posts.value = postIds.map(id => ({
-    //         id,
-    //         ...allPosts[id]
-    //       })).filter(post => post); // Убедитесь, что пост существует
-    //     } else {
-    //       error.value = 'Посты не найдены';
-    //       posts.value = [];
-    //     }
-    //     loading.value = false; // Завершаем загрузку
-    //   }, (error) => {
-    //     console.error('Ошибка при получении постов:', error);
-    //     error.value = 'Ошибка при получении постов';
-    //     loading.value = false;
-    //   });
-    // };
-
-//update()
-
-//---------------------------------- работающий подход, который достается посты по ссылкам из узла тред
-// Реактивная переменная для хранения постов
+// const newBoardName = ref('');
+// const newThreadTitle = ref('');
+// const selectedBoardId = ref('');
+// const newPostAuthor = ref('');
+// const newPostContent = ref('');
+// const selectedThreadId = ref('');
 // const posts = ref([]);
 
-// // Функция для получения постов по ID треда
-// const fetchPostsByThreadId = (threadId) => {
-//   threadState.value = localStorage.getItem('threadState') ? JSON.parse(localStorage.getItem('threadState')) : '';
-
-//   const threadRef = dbRef(database, `threads/${threadId}`);
-  
-//   // Слушаем изменения в треде
-//   onValue(threadRef, (snapshot) => {
-//     const threadData = snapshot.val();
-//     if (threadData) {
-//       // Для каждого поста в треде получаем полную информацию о постах
-//       const postPromises = Object.keys(threadData).map((postId) => {
-//         return new Promise((resolve) => {
-//           const postRef = dbRef(database, `posts/${postId}`);
-//           onValue(postRef, (postSnapshot) => {
-//             resolve({ id: postId, ...postSnapshot.val() });
-//           });
-//         });
-//       });
-
-//       // Когда все посты будут загружены, обновляем реактивную переменную
-//       Promise.all(postPromises).then((loadedPosts) => {
-//         posts.value = loadedPosts;
-//       });
-//     } else {
-//       posts.value = []; // Если нет данных
-//     }
+// const createBoard = async () => {
+//   const boardId = push(dbRef(database, 'boards')).key; // Генерация уникального ID
+//   await set(dbRef(database, `boards/${boardId}`), {
+//     boardId: boardId,
+//     name: newBoardName.value
 //   });
+//   newBoardName.value = ''; // Очистка поля
 // };
 
-// Выполняем загрузку данных при монтировании компонента
-//onMounted(() => {
-//  const threadId = String(threadState.value[0]); // Пример ID треда
-//  fetchPostsByThreadId(threadId);
-//});
-
-// watch(threadState, () => { 
-//   const threadId = threadState.value; // Пример ID треда
-//   fetchPostsByThreadId(threadId);  
-// })
-
-// watch(threadState, () => {
-//   console.log('dwd')
-// })
-
-// const posts = ref([])
-// const messagesRef = dbRef(database, 'posts');
-// onMounted(() => {
-//   onValue(messagesRef, (snapshot) => {
-//     const data = snapshot.val();
-//     posts.value = data ? Object.values(data) : []; // Обновляем сообщения
+// const createThread = async () => {
+//   const threadId = push(dbRef(database, 'threads')).key; // Генерация уникального ID
+//   await set(dbRef(database, `threads/${threadId}`), {
+//     boardId: selectedBoardId.value,
+//     title: newThreadTitle.value
 //   });
-// });
-
-// ------------------------------------------------------------------------------------------------------
-
-// const newMessage = ref('')
-// const messages = ref([])
-
-// const messagesRef = dbRef(database, 'messages');
-// const sendMessage = () => {
-//   const message = {
-//     text: newMessage.value,
-//     timestamp: Date.now() // Можно использовать временную метку
-//   };
-
-//   // Запись сообщения в узел 'messages' с использованием push()
-//   push(messagesRef, message)
-//     .then(() => {
-//       newMessage.value = ''; // Очищаем поле ввода
-//     })
-//     .catch((error) => {
-//       console.error("Ошибка при отправке сообщения: ", error);
-//     });
+//   newThreadTitle.value = ''; // Очистка поля
+//   selectedBoardId.value = ''; // Очистка поля
 // };
 
-// onMounted(() => {
-//   onValue(messagesRef, (snapshot) => {
-//     const data = snapshot.val();
-//     messages.value = data ? Object.values(data) : []; // Обновляем сообщения
+// const createPost = async () => {
+//   const postId = push(dbRef(database, 'posts')).key; // Генерация уникального ID
+//   await set(dbRef(database, `posts/${postId}`), {
+//     threadId: selectedThreadId.value,
+//     author: newPostAuthor.value,
+//     content: newPostContent.value
 //   });
-// });
+//   newPostAuthor.value = ''; // Очистка поля
+//   newPostContent.value = ''; // Очистка поля
+//   selectedThreadId.value = ''; // Очистка поля
+// };
+
+// const fetchPosts = () => {
+//   const postsRef = dbRef(database, 'posts');
+//   onValue(postsRef, (snapshot) => {
+//     const data = snapshot.val();
+//     posts.value = Object.values(data).filter(post => post.threadId === '1');
+//   });
+// };
 
 // -------------------------------------------------------------------------------------------------------------
 
@@ -370,7 +210,7 @@ const CreateNewThread = async () => {
 // const writeData = () => {
 // set(dbRef(database, String(Date.now())), {
 //     username: newMessage.value,
-//   });  
+//   });
 // }
 
 // // Подписка на изменения в базе данных
@@ -381,36 +221,66 @@ const CreateNewThread = async () => {
 //   });
 // });
 
+const hashString = async (input) => {
+  const encoder = new TextEncoder()
+  const data = encoder.encode(input)
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data)
+  const hashArray = Array.from(new Uint8Array(hashBuffer))
+  const hashHex = hashArray.map((b) => b.toString(16).padStart(2, '0')).join('')
+  return hashHex.substring(0, 8)
+}
 </script>
 
 <template>
-  <div class="chat-container">
-  <div>
-  <h1>Посты по треду</h1>
-    <ul>
-      <li v-for="post in posts" :key="post.id">
-        {{ post.name }} - {{ post.theme }}
-      </li>
-    </ul>
-  </div>
-
-    <div class="input-container">
-      <input
-        type="text"
-        v-model="postName"
-        @keyup.enter="sendPost"
-        placeholder="name"
+  <div class="container mx-auto p-4">
+    <div class="form-group w-2/3">
+      <div class="flex gap-2">
+        <input
+          v-model="postName"
+          placeholder="name"
+          class="flex-1 mt-4 text-sm p-2 ring-1 ring-slate-900/10 shadow-sm rounded-md focus:outline-none focus:ring-2 focus:ring-pink-500 caret-pink-500 dark:bg-zinc-800 dark:ring-0 dark:highlight-white/5 dark:focus:ring-2 dark:focus:ring-pink-500 dark:focus:bg-zinc-900 dark:text-white"
+          type="text"
         />
-      />
-
-      <input
-        type="text"
-        v-model="postTheme"
-        placeholder="theme"
+        <input
+          v-model="postTheme"
+          placeholder="theme"
+          class="flex-1 mt-4 text-sm p-2 ring-1 ring-slate-900/10 shadow-sm rounded-md focus:outline-none focus:ring-2 focus:ring-pink-500 caret-pink-500 dark:bg-zinc-800 dark:ring-0 dark:highlight-white/5 dark:focus:ring-2 dark:focus:ring-pink-500 dark:focus:bg-zinc-900 dark:text-white"
+          type="text"
         />
-      />
+        <input
+          v-model="postPassword"
+          placeholder="passcode"
+          class="flex-1 mt-4 text-sm p-2 ring-1 ring-slate-900/10 shadow-sm rounded-md focus:outline-none focus:ring-2 focus:ring-pink-500 caret-pink-500 dark:bg-zinc-800 dark:ring-0 dark:highlight-white/5 dark:focus:ring-2 dark:focus:ring-pink-500 dark:focus:bg-zinc-900 dark:text-white"
+          type="text"
+        />
+      </div>
 
-      <button @click="CreateNewThread">Отправить</button>
+      <div class="flex mt-2">
+        <textarea
+          @keyup.shift.enter="sendPost"
+          v-model="postText"
+          placeholder="post"
+          class="flex-1 text-sm p-2 ring-1 ring-slate-900/10 shadow-sm rounded-md focus:outline-none focus:ring-2 focus:ring-pink-500 caret-pink-500 dark:bg-zinc-800 dark:ring-0 dark:highlight-white/5 dark:focus:ring-2 dark:focus:ring-pink-500 dark:focus:bg-zinc-900 dark:text-white"
+          rows="2"
+        ></textarea>
+      </div>
+
+      <div class="form-group w-2/3 mt-2">
+        <div class="flex items-center pb-4 mt-2">
+          <input
+            v-model="postUrl"
+            placeholder="url"
+            class="flex-1 text-sm p-2 ring-1 ring-slate-900/10 shadow-sm rounded-md focus:outline-none focus:ring-2 focus:ring-pink-500 caret-pink-500 dark:bg-zinc-800 dark:ring-0 dark:highlight-white/5 dark:focus:ring-2 dark:focus:ring-pink-500 dark:focus:bg-zinc-900 dark:text-white"
+            type="text"
+          />
+          <button
+            @click="sendPost"
+            class="dark:bg-twitch ml-2 bg-black text-white rounded-2xl p-1 min-w-32"
+          >
+            Post
+          </button>
+        </div>
+      </div>
     </div>
   </div>
 </template>

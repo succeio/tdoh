@@ -1,0 +1,29 @@
+<script setup>
+import PostTemplate from './postTemplate.vue';
+
+defineProps({
+  posts: Array
+})
+
+
+</script>
+
+<template>
+  <div>
+    <PostTemplate v-for="(post, index) in posts"
+    :key="index"
+    :name="post.name"
+    :data="post.data"
+    :time="post.time"
+    :id="index"
+    :threadId="post.threadId"
+    :postId="post.postId"
+    :url="post.url"
+    :text="post.text"
+    :theme="post.theme"
+    :password="post.password"
+    :day="post.day"
+    />
+
+  </div>
+</template>
