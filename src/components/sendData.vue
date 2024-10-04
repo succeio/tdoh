@@ -1,7 +1,11 @@
 <script setup>
-import { ref, inject } from 'vue'
+import { ref, inject, watch } from 'vue'
 import { database } from '../firebase'
-import { ref as dbRef, push, set } from 'firebase/database'
+import { ref as dbRef, push, set, get, update } from 'firebase/database'
+
+const props = defineProps({
+  replyId:  String
+})
 
 const fetchPosts = inject('fetchPosts')
 
@@ -16,6 +20,13 @@ const hashedString = ref('')
 const threadState = ref('')
 const boardState = ref('')
 
+const replies = ref([])
+
+watch(() => props.replyId, (newReplyId) => {
+  postText.value = `${postText.value} #${String(newReplyId)}`; 
+}, );
+
+
 const sendPost = async () => {
   try {
     threadState.value = localStorage.getItem('threadState')
@@ -27,6 +38,8 @@ const sendPost = async () => {
 
     if (threadState.value && boardState.value) {
       const postId = push(dbRef(database, `${boardState.value}/${threadState.value}`)).key // Генерация уникального ID
+
+      replies.value = postText.value.match(/#([A-Za-z0-9_-]+)/g)
 
       hashedString.value = await hashString(postPassword.value)
       const newPost = {
@@ -44,15 +57,44 @@ const sendPost = async () => {
         data: new Date().toLocaleDateString(),
         day: ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'][new Date().getDay()],
         postId: postId,
-        threadId: threadState.value
-      }
+        threadId: threadState.value,
+        }
 
       await set(dbRef(database, `${boardState.value}/${threadState.value}/${postId}`), newPost)
 
       postText.value = ''
       postUrl.value = ''
       postTheme.value = ''
+// ----------- код обновления reply      
+      if (replies.value && replies.value.length) {
+        for (const id of replies.value) {
+          const sId = id.replace('#', '');
+          const postRef = dbRef(database, `${boardState.value}/${threadState.value}/${sId}`); // Путь к посту
 
+          try {
+            const snapshot = await get(postRef);
+            if (snapshot.exists()) {
+              const currentReplies = snapshot.val().replies || [];
+              // Проверяем, если newPostId уже существует в массиве
+              if (!currentReplies.includes(postId)) {
+                // Обновляем массив replies
+                await update(postRef, {
+                  replies: [...currentReplies, postId]
+                });
+                console.log(`Пост с id ${sId} успешно обновлен!`);
+              } else {
+                console.log(`Пост с id ${sId} уже содержит newPostId.`);
+              }
+            } else {
+              console.log(`Пост с id ${sId} не найден.`);
+            }
+          } catch (err) {
+            console.error(`Ошибка при обновлении документа с id ${sId}: `, err);
+          }
+        }
+      }
+
+// ----------- end
       setTimeout(() => {
         window.scrollTo({
           top: document.body.scrollHeight,
@@ -79,8 +121,8 @@ const sendPost = async () => {
         data: new Date().toLocaleDateString(),
         day: ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'][new Date().getDay()],
         postId: postId,
-        threadId: threadId
-      }
+        threadId: threadId,
+        }
 
       //      const boardId = push(dbRef(database, 'boards')).key
       //      boardState.value = boardId

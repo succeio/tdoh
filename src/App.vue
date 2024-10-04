@@ -13,6 +13,12 @@ const posts = ref([])
 const threadState = ref('')
 const boardState = ref('')
 
+const postId = ref('')
+const getPostId = (id) => {
+  postId.value = id
+}
+provide('getPostId', getPostId)
+
 // Функция для полной загрузки данных onValue
 const fetchPosts = () => {
   threadState.value = localStorage.getItem('threadState') ? localStorage.getItem('threadState') : ''
@@ -193,6 +199,7 @@ provide('fetchThreads', fetchThreads)
             :theme="post.theme"
             :password="post.password"
             :day="post.day"
+            :replies="posts.replies"
             />
           </div>
         </div>
@@ -200,7 +207,7 @@ provide('fetchThreads', fetchThreads)
     </div>
 
 
-    <SendData />
+    <SendData :reply-id="postId" />
 
   </div>
 </div>
