@@ -1,10 +1,10 @@
 <script setup>
-import { ref, inject, watch } from 'vue'
+import { ref, inject, watch, onMounted } from 'vue'
 import { database } from '../firebase'
 import { ref as dbRef, push, set, get, update } from 'firebase/database'
 
 const props = defineProps({
-  replyId:  String
+  replyId: String
 })
 
 const fetchPosts = inject('fetchPosts')
@@ -14,18 +14,10 @@ const postTheme = ref('')
 const postText = ref('')
 const postUrl = ref('')
 const postPassword = ref('')
-
 const hashedString = ref('')
-
 const threadState = ref('')
 const boardState = ref('')
-
 const replies = ref([])
-
-watch(() => props.replyId, (newReplyId) => {
-  postText.value = `${postText.value} #${String(newReplyId)}`; 
-}, );
-
 
 const sendPost = async () => {
   try {
@@ -57,50 +49,68 @@ const sendPost = async () => {
         data: new Date().toLocaleDateString(),
         day: ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'][new Date().getDay()],
         postId: postId,
-        threadId: threadState.value,
-        }
+        threadId: threadState.value
+      }
 
-      await set(dbRef(database, `${boardState.value}/${threadState.value}/${postId}`), newPost)
+      const savedTime = localStorage.getItem('tmlg')
+        ? localStorage.getItem('tmlg')
+        : localStorage.setItem('tmlg', Date.now() + 6)
+      if (savedTime) {
+        const currentTime = Date.now()
+        const timeElapsed = currentTime - savedTime
+        if (timeElapsed >= 5000) {
+          if (postText.value.length < 250 && ((selectedEmoji.value === generatedEmoji.value))) {
+            await set(
+              dbRef(database, `${boardState.value}/${threadState.value}/${postId}`),
+              newPost
+            )
+            localStorage.setItem('tmlg', Date.now())
+            generateEmojis()
+            postText.value = ''
+            postUrl.value = ''
+            postTheme.value = ''
 
-      postText.value = ''
-      postUrl.value = ''
-      postTheme.value = ''
-// ----------- код обновления reply      
-      if (replies.value && replies.value.length) {
-        for (const id of replies.value) {
-          const sId = id.replace('#', '');
-          const postRef = dbRef(database, `${boardState.value}/${threadState.value}/${sId}`); // Путь к посту
+            // ----------- код обновления reply -----------
+            if (replies.value && replies.value.length) {
+              for (const id of replies.value) {
+                const sId = id.replace('#', '')
+                const postRef = dbRef(database, `${boardState.value}/${threadState.value}/${sId}`) // Путь к посту
 
-          try {
-            const snapshot = await get(postRef);
-            if (snapshot.exists()) {
-              const currentReplies = snapshot.val().replies || [];
-              // Проверяем, если newPostId уже существует в массиве
-              if (!currentReplies.includes(postId)) {
-                // Обновляем массив replies
-                await update(postRef, {
-                  replies: [...currentReplies, postId]
-                });
-                console.log(`Пост с id ${sId} успешно обновлен!`);
-              } else {
-                console.log(`Пост с id ${sId} уже содержит newPostId.`);
+                try {
+                  const snapshot = await get(postRef)
+                  if (snapshot.exists()) {
+                    const currentReplies = snapshot.val().replies || []
+                    // Проверяем, если newPostId уже существует в массиве
+                    if (!currentReplies.includes(postId)) {
+                      // Обновляем массив replies
+                      await update(postRef, {
+                        replies: [...currentReplies, postId]
+                      })
+                      console.log(`Пост с id ${sId} успешно обновлен!`)
+                    } else {
+                      console.log(`Пост с id ${sId} уже содержит newPostId.`)
+                    }
+                  } else {
+                    console.log(`Пост с id ${sId} не найден.`)
+                  }
+                } catch (err) {
+                  console.error(`Ошибка при обновлении документа с id ${sId}: `, err)
+                }
               }
-            } else {
-              console.log(`Пост с id ${sId} не найден.`);
             }
-          } catch (err) {
-            console.error(`Ошибка при обновлении документа с id ${sId}: `, err);
+            // ----------- end -----------
+
+            setTimeout(() => {
+              window.scrollTo({
+                top: document.body.scrollHeight,
+                behavior: 'smooth'
+              })
+            }, 100)
+          } else {
+            console.log('Много букв')
           }
         }
       }
-
-// ----------- end
-      setTimeout(() => {
-        window.scrollTo({
-          top: document.body.scrollHeight,
-          behavior: 'smooth'
-        })
-      }, 100)
     } else if (boardState.value) {
       const threadId = push(dbRef(database, 'threads')).key // Генерация уникального ID
       const postId = push(dbRef(database, `${boardState.value}/${threadId}`)).key // Генерация уникального ID
@@ -121,22 +131,26 @@ const sendPost = async () => {
         data: new Date().toLocaleDateString(),
         day: ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'][new Date().getDay()],
         postId: postId,
-        threadId: threadId,
-        }
+        threadId: threadId
+      }
 
-      //      const boardId = push(dbRef(database, 'boards')).key
-      //      boardState.value = boardId
-      //      localStorage.setItem('boardState', boardId)
+      if (
+        postText.value.length < 250 &&
+        /\.(jpeg|jpg|gif|png|mp4|webm|ogg)$/i.test(postUrl.value && ((selectedEmoji.value === generatedEmoji.value)))
+      ) {
+        await set(dbRef(database, `${boardState.value}/${threadId}/${postId}`), newPost)
+        generateEmojis()
+        postText.value = ''
+        postUrl.value = ''
+        postTheme.value = ''
 
-      await set(dbRef(database, `${boardState.value}/${threadId}/${postId}`), newPost)
+        localStorage.setItem('threadState', threadId)
+        threadState.value = threadId
 
-      postText.value = ''
-      postUrl.value = ''
-      postTheme.value = ''
-
-      localStorage.setItem('threadState', threadId)
-      threadState.value = threadId
-      fetchPosts()
+        fetchPosts()
+      } else {
+        console.log('Много букв или не выбран файл')
+      }
     } else {
       console.log('Раздел не выбран')
     }
@@ -144,124 +158,6 @@ const sendPost = async () => {
     console.error(error)
   }
 }
-
-// Функция для полной загрузки данных onValue
-// const fetchPosts1 = () => {
-//   threadState.value = localStorage.getItem('threadState')
-//     ? localStorage.getItem('threadState')
-//     : localStorage.setItem('threadState', '')
-//   boardState.value = localStorage.getItem('boardState')
-//     ? localStorage.getItem('boardState')
-//     : localStorage.setItem('boardState', '')
-
-//   const postsRef = dbRef(database, `${boardState.value}/${threadState.value}/`)
-
-//   onValue(postsRef, (snapshot) => {
-//     const data = snapshot.val()
-//     if (data) {
-//       // Если есть данные, извлекаем посты
-//       posts.value = Object.values(data) // Преобразуем объект постов в массив
-//     } else {
-//       posts.value = []
-//     }
-//   })
-// }
-
-// Функция для слежения за добавлением новых постов onChildAdded
-
-// const watchNewPosts = () => {
-//   const postsRef = dbRef(database, `${boardState.value}/${threadState.value}/`)
-
-//   onChildAdded(postsRef, (snapshot) => {
-//     const newPost = snapshot.val();
-//     posts.value.push(newPost); // Добавляем новый пост в конец массива
-//   });
-// };
-
-// Lifecycle hook: onMounted для загрузки данных при монтировании компонента
-// onMounted(() => {
-//   localStorage.setItem('boardState', '')
-//   localStorage.setItem('threadState', '')
-//      fetchPosts();
-//      watchNewPosts();
-//})
-
-// Lifecycle hook: onUnmounted для удаления слушателей при демонтировании компонента
-// onUnmounted(() => {
-//   // Тут можно добавить код для удаления слушателей при необходимости
-// });
-
-// --------------------
-
-// onValue(postsRef, (snapshot) => {
-//   const data = snapshot.val()
-//   posts.value = Object.values(data).filter(post => post.threadId === '1')
-// })
-
-// const newBoardName = ref('');
-// const newThreadTitle = ref('');
-// const selectedBoardId = ref('');
-// const newPostAuthor = ref('');
-// const newPostContent = ref('');
-// const selectedThreadId = ref('');
-// const posts = ref([]);
-
-// const createBoard = async () => {
-//   const boardId = push(dbRef(database, 'boards')).key; // Генерация уникального ID
-//   await set(dbRef(database, `boards/${boardId}`), {
-//     boardId: boardId,
-//     name: newBoardName.value
-//   });
-//   newBoardName.value = ''; // Очистка поля
-// };
-
-// const createThread = async () => {
-//   const threadId = push(dbRef(database, 'threads')).key; // Генерация уникального ID
-//   await set(dbRef(database, `threads/${threadId}`), {
-//     boardId: selectedBoardId.value,
-//     title: newThreadTitle.value
-//   });
-//   newThreadTitle.value = ''; // Очистка поля
-//   selectedBoardId.value = ''; // Очистка поля
-// };
-
-// const createPost = async () => {
-//   const postId = push(dbRef(database, 'posts')).key; // Генерация уникального ID
-//   await set(dbRef(database, `posts/${postId}`), {
-//     threadId: selectedThreadId.value,
-//     author: newPostAuthor.value,
-//     content: newPostContent.value
-//   });
-//   newPostAuthor.value = ''; // Очистка поля
-//   newPostContent.value = ''; // Очистка поля
-//   selectedThreadId.value = ''; // Очистка поля
-// };
-
-// const fetchPosts = () => {
-//   const postsRef = dbRef(database, 'posts');
-//   onValue(postsRef, (snapshot) => {
-//     const data = snapshot.val();
-//     posts.value = Object.values(data).filter(post => post.threadId === '1');
-//   });
-// };
-
-// -------------------------------------------------------------------------------------------------------------
-
-// const messagesRef = dbRef(database, 'messages');
-
-// const writeData = () => {
-// set(dbRef(database, String(Date.now())), {
-//     username: newMessage.value,
-//   });
-// }
-
-// // Подписка на изменения в базе данных
-// onMounted(() => {
-//   onValue(messagesRef, (snapshot) => {
-//     const data = snapshot.val();
-//     messages.value = data ? Object.values(data) : []; // Обновляем сообщения
-//   });
-// });
 
 const hashString = async (input) => {
   const encoder = new TextEncoder()
@@ -271,6 +167,55 @@ const hashString = async (input) => {
   const hashHex = hashArray.map((b) => b.toString(16).padStart(2, '0')).join('')
   return hashHex.substring(0, 8)
 }
+
+watch(
+  () => props.replyId,
+  (newReplyId) => {
+    postText.value = `${postText.value} #${String(newReplyId)}`
+  }
+)
+
+//-----captcha
+const emojis = ref(['😀', '😂', '😍', '😎', '😢', '🥳', '🤔', '😱', '😴'])
+const generatedEmoji = ref(null)
+const selectedEmoji = ref(null)
+const resultMessage = ref('')
+
+const generateEmojis = () => {
+  // Генерируем случайный эмодзи
+  generatedEmoji.value = emojis.value[Math.floor(Math.random() * emojis.value.length)]
+
+  // Генерируем три случайных эмодзи, включая сгенерированный
+  const randomEmojis = new Set()
+  randomEmojis.add(generatedEmoji.value)
+  while (randomEmojis.size < 3) {
+    randomEmojis.add(emojis.value[Math.floor(Math.random() * emojis.value.length)])
+  }
+  emojis.value = Array.from(randomEmojis)
+  selectedEmoji.value = null
+  resultMessage.value = ''
+}
+
+const selectEmoji = (emoji) => {
+  selectedEmoji.value = emoji
+  localStorage.setItem('selectedEmoji', emoji)
+  checkSelection()
+}
+
+const checkSelection = () => {
+  if (selectedEmoji.value === generatedEmoji.value) {
+    resultMessage.value = 'Капча решена!'
+  } else {
+    resultMessage.value = 'Попробуйте снова!'
+  }
+}
+
+onMounted(
+  () => {
+    localStorage.setItem('tmlg', Date.now() + 6)
+  },
+  generateEmojis()
+)
 </script>
 
 <template>
@@ -297,14 +242,24 @@ const hashString = async (input) => {
         />
       </div>
 
-      <div class="flex mt-2">
+      <div class="flex mt-2 relative">
         <textarea
           @keyup.shift.enter="sendPost"
           v-model="postText"
           placeholder="post"
           class="flex-1 text-sm p-2 ring-1 ring-slate-900/10 shadow-sm rounded-md focus:outline-none focus:ring-2 focus:ring-pink-500 caret-pink-500 dark:bg-zinc-800 dark:ring-0 dark:highlight-white/5 dark:focus:ring-2 dark:focus:ring-pink-500 dark:focus:bg-zinc-900 dark:text-white"
-          rows="2"
+          rows="4"
         ></textarea>
+        <div
+          :class="{
+            'text-red-500': postText.length > 250,
+            'text-slate-400': postText.length <= 250,
+            'select-none': true
+          }"
+          class="absolute bottom-2 right-2"
+        >
+          {{ postText.length }}/250
+        </div>
       </div>
 
       <div class="form-group w-2/3 mt-2">
@@ -321,8 +276,24 @@ const hashString = async (input) => {
           >
             Post
           </button>
+
+
         </div>
       </div>
+
+          <div class="flex bg-black w-2/3 rounded-2xl text-white p-1 dark:bg-twitch">
+            <p class="ml-2">Найдите {{ generatedEmoji }}: </p>
+            <div class="flex gap-2 pl-4">
+              <div
+                v-for="(emoji, index) in emojis"
+                :key="index"
+                @click="selectEmoji(emoji)"
+                class="cursor-pointer hover:scale-110 transition-transform"> {{ emoji }}
+              </div>
+            </div>
+          <div class="pl-4" v-if=(checkSelection)>{{ resultMessage }}</div>
+          </div>
+
     </div>
   </div>
 </template>

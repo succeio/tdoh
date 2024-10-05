@@ -12,12 +12,7 @@ import SendData from './components/sendData.vue';
 const posts = ref([])
 const threadState = ref('')
 const boardState = ref('')
-
 const postId = ref('')
-const getPostId = (id) => {
-  postId.value = id
-}
-provide('getPostId', getPostId)
 
 // Функция для полной загрузки данных onValue
 const fetchPosts = () => {
@@ -37,80 +32,6 @@ const fetchPosts = () => {
   });
 
 };
-
-
-// Путь к разделу с тредами (например, `-O8H6aNDuf1NlK9k2Gz6/`)
-// const sectionRef = dbRef(database, boardState.value || '-O8H6aNDuf1NlK9k2Gz6'
-// );
-
-// const threads = ref([]); // Массив для хранения тредов и их постов
-
-// Функция для загрузки всех тредов
-// const fetchThreads = () => {
-//   boardState.value = localStorage.getItem('boardState') 
-//   threads.value = []
-//   onValue(sectionRef, (snapshot) => {
-//     const threadsData = snapshot.val();
-//     if (threadsData) {
-//       const threadKeys = Object.keys(threadsData); // Получаем ключи всех тредов
-
-//       // Для каждого треда выполняем запрос на получение первых 3 постов
-//       threadKeys.forEach((threadKey) => {
-//         const threadRef = query(
-//           dbRef(database, `${boardState.value}/${threadKey}/`), // Путь к треду
-//           limitToFirst(5) // Ограничиваем запрос до 3 первых постов
-//         );
-
-//         onValue(threadRef, (threadSnapshot) => {
-//           const postsData = threadSnapshot.val();
-//           if (postsData) {
-//             const posts = Object.values(postsData); // Преобразуем посты в массив
-//             threads.value.push({ threadKey, posts }); // Сохраняем тред и его посты
-//           } else {
-//             threads.value.push({ threadKey, posts: [] }); // Если постов нет, добавляем пустой массив
-//           }
-//         });
-//       });
-//     }
-//   });
-// };
-
-// const threads = ref([]);
-// const fetchThreads = async () => {
-//   threads.value = []
-//   const boardState = ref(localStorage.getItem('boardState'));
-//   try {
-//     const sectionRef = dbRef(database, boardState.value); // Путь к секции
-//     const snapshot = await get(sectionRef);
-
-//     if (snapshot.exists()) {
-//       const threadsData = snapshot.val();
-//       const threadKeys = Object.keys(threadsData); // Получаем ключи всех тредов
-
-//       // Для каждого треда выполняем запрос на получение первых 5 постов
-//       for (const threadKey of threadKeys) {
-//         const threadRef = query(
-//           dbRef(database, `${boardState.value}/${threadKey}/`), // Путь к треду
-//           limitToFirst(5) // Ограничиваем запрос до 5 первых постов
-//         );
-
-//         const threadSnapshot = await get(threadRef);
-//         const postsData = threadSnapshot.val();
-
-//         if (postsData) {
-//           const posts = Object.values(postsData); // Преобразуем посты в массив
-//           threads.value.push({ threadKey, posts }); // Сохраняем тред и его посты
-//         } else {
-//           threads.value.push({ threadKey, posts: [] }); // Если постов нет, добавляем пустой массив
-//         }
-//       }
-//     }
-//   } catch (error) {
-//     console.error("Ошибка при загрузке тредов:", error);
-//   }
-
-//   return threads.value; // Возвращаем массив тредов
-// };
 
 const threads = ref([]);
 const fetchThreads = async () => {
@@ -153,36 +74,38 @@ const fetchThreads = async () => {
   return threads.value; // Возвращаем массив тредов
 };
 
+const getPostId = (id) => {
+  postId.value = id
+}
 
+provide('getPostId', getPostId)
 provide('fetchPosts', fetchPosts)
 provide('fetchThreads', fetchThreads)
 
-  // // Следим за изменениями в localStorage
-  // watch([threadState, boardState], () => {
-  //   localStorage.setItem('threadState', threadState.value);
-  //   localStorage.setItem('boardState', boardState.value);
-  //   fetchPosts(); // Обновляем посты при изменении threadState или boardState
-  // });
-
-
-// Обновляем данные при монтировании компонента
-// onMounted(() => {
-//   fetchPosts();
-// });
-
+const state = ref(false); 
 </script>
 
 <template>
 <div class="min-h-screen dark:bg-black">
   <div class="max-w-4xl rounded-2xl ml-6 bg-white dark:bg-black">
 
-    
     <MainHeader class="" />
+
+    <div class="pt-4">
+          <button v-if="!threadState" @click="() => {state = !state}" class="dark:bg-twitch ml-2 bg-black text-white rounded-2xl p-1 min-w-32">
+      {{ 'Создать тред' }} 
+    </button>
+    </div>
+
+    
+    <div class="">
+      <SendData v-if="!state && !threadState" :reply-id="postId"/>
+    </div>
+    
 
     <PostListTemplate v-if="threadState" :posts="posts" />
 
-    
-    <div v-if="!threadState">
+    <div v-if="!threadState" v-auto-animate>
       <div v-if="threads.length">
         <div v-for="(thread, threadIndex) in threads" :key="threadIndex">
           <div class="pt-4" v-if="thread.posts.length">
@@ -206,8 +129,7 @@ provide('fetchThreads', fetchThreads)
       </div>
     </div>
 
-
-    <SendData :reply-id="postId" />
+    <SendData v-if="threadState" :reply-id="postId" />
 
   </div>
 </div>

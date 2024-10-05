@@ -5,11 +5,10 @@ defineProps({
   posts: Array
 })
 
-
 </script>
 
 <template>
-  <div>
+  <div v-auto-animate>
     <PostTemplate v-for="(post, index) in posts"
     :key="index"
     :name="post.name"
