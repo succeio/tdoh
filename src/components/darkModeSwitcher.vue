@@ -28,11 +28,18 @@ watch(isDarkMode, (newValue) => {
     document.documentElement.classList.remove('dark');
   }
 });
+
+  // <div>
+  //   <button @click="toggleTheme" class="p-2 bg-gray-200 dark:bg-zinc-900 dark:text-white font-bold rounded">
+  //     {{ isDarkMode ? 'Темная тема' : 'Светлая тема' }}
+  //   </button>
+  // </div>
+
 </script>
 
 <template>
   <div>
-    <button @click="toggleTheme" class="p-2 bg-gray-200 dark:bg-zinc-900 dark:text-white font-bold rounded">
+    <button @click="toggleTheme" class="  dark:text-white rounded-2xl">
       {{ isDarkMode ? 'Темная тема' : 'Светлая тема' }}
     </button>
   </div>

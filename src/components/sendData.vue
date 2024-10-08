@@ -3,6 +3,16 @@ import { ref, inject, watch, onMounted } from 'vue'
 import { database } from '../firebase'
 import { ref as dbRef, push, set, get, update } from 'firebase/database'
 
+(function() {
+    const devtools = { orientation: false };
+    window.addEventListener('resize', function() {
+        if (window.outerWidth - window.innerWidth > 100 || window.outerHeight - window.innerHeight > 100) {
+            devtools.orientation = true;
+            generatedEmoji.value = ' '
+        }
+    });
+})();
+
 const props = defineProps({
   replyId: String
 })
@@ -19,6 +29,24 @@ const threadState = ref('')
 const boardState = ref('')
 const replies = ref([])
 
+const boards = [
+    "Anime",
+    "Asylum",
+    "b",
+    "dev",
+    "Videogames",
+    "VisualNovels",
+    "Gamedev",
+    "Art",
+    "Consoles",
+    "Manga",
+    "MobileDevices",
+    "BoardGames",
+    "Paranormal",
+    "Programming",
+    "Technology"
+];
+
 const sendPost = async () => {
   try {
     threadState.value = localStorage.getItem('threadState')
@@ -28,7 +56,7 @@ const sendPost = async () => {
       ? localStorage.getItem('boardState')
       : localStorage.setItem('boardState', '')
 
-    if (threadState.value && boardState.value) {
+    if (threadState.value && boardState.value && (boards.some(board => boardState.value.includes(board)))) {
       const postId = push(dbRef(database, `${boardState.value}/${threadState.value}`)).key // Генерация уникального ID
 
       replies.value = postText.value.match(/#([A-Za-z0-9_-]+)/g)
@@ -66,10 +94,11 @@ const sendPost = async () => {
             )
             localStorage.setItem('tmlg', Date.now())
             generateEmojis()
+
             postText.value = ''
             postUrl.value = ''
             postTheme.value = ''
-
+      
             // ----------- код обновления reply -----------
             if (replies.value && replies.value.length) {
               for (const id of replies.value) {
@@ -111,7 +140,7 @@ const sendPost = async () => {
           }
         }
       }
-    } else if (boardState.value) {
+    } else if (boardState.value && (boards.some(board => boardState.value.includes(board)))) {
       const threadId = push(dbRef(database, 'threads')).key // Генерация уникального ID
       const postId = push(dbRef(database, `${boardState.value}/${threadId}`)).key // Генерация уникального ID
 
@@ -134,26 +163,35 @@ const sendPost = async () => {
         threadId: threadId
       }
 
-      if (
-        postText.value.length < 250 &&
-        /\.(jpeg|jpg|gif|png|mp4|webm|ogg)$/i.test(postUrl.value && ((selectedEmoji.value === generatedEmoji.value)))
-      ) {
-        await set(dbRef(database, `${boardState.value}/${threadId}/${postId}`), newPost)
-        generateEmojis()
-        postText.value = ''
-        postUrl.value = ''
-        postTheme.value = ''
+      const savedTime = localStorage.getItem('tmlg')
+        ? localStorage.getItem('tmlg')
+        : localStorage.setItem('tmlg', Date.now() + 6)
+      if (savedTime) {
+        const currentTime = Date.now()
+        const timeElapsed = currentTime - savedTime
+        if (timeElapsed >= 5000) {
+          
 
-        localStorage.setItem('threadState', threadId)
-        threadState.value = threadId
+          if (postText.value.length < 250 &&/\.(jpeg|jpg|gif|png|mp4|webm|ogg)$/i.test(postUrl.value) && (selectedEmoji.value === generatedEmoji.value)) {
+            await set(dbRef(database, `${boardState.value}/${threadId}/${postId}`), newPost)
+            generateEmojis()
+            postText.value = ''
+            postUrl.value = ''
+            postTheme.value = ''
 
-        fetchPosts()
-      } else {
-        console.log('Много букв или не выбран файл')
+            localStorage.setItem('threadState', threadId)
+            threadState.value = threadId
+
+            fetchPosts()
+          } else {
+            console.log('Много букв или не выбран файл')
+          }
+        } else {
+          console.log('Раздел не выбран')
+        }
       }
-    } else {
-      console.log('Раздел не выбран')
     }
+
   } catch (error) {
     console.error(error)
   }
@@ -219,7 +257,7 @@ onMounted(
 </script>
 
 <template>
-  <div class="container mx-auto p-4">
+  <div class="container p-4">
     <div class="form-group w-2/3">
       <div class="flex gap-2">
         <input
@@ -253,7 +291,7 @@ onMounted(
         <div
           :class="{
             'text-red-500': postText.length > 250,
-            'text-slate-400': postText.length <= 250,
+            'text-zinc-700': postText.length <= 250,
             'select-none': true
           }"
           class="absolute bottom-2 right-2"

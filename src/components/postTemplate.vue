@@ -1,5 +1,6 @@
 <script setup>
 import { computed, ref, inject } from 'vue'
+import { VueShowdown }  from 'vue-showdown'
 
 const fetchPosts = inject('fetchPosts')
 const getPostId = inject('getPostId')
@@ -23,6 +24,7 @@ const openThread = (thread) => {
   localStorage.setItem('threadState', thread)
   fetchPosts()
 }
+
 
 // Проверка, является ли ссылка изображением
 const isImage = computed(() => {
@@ -95,9 +97,9 @@ const repl = (id) => {
 </script>
 
 <template>
-  <div :id="postId" class="max-w-fit mt-2 bg-gray-200 dark:text-white p-2 rounded-2xl dark:bg-zinc-900" :class="{'ml-2': props.id !== 0, 'border-twitch border-l-2 dark:border-twitch dark:border-l-2': props.id === 0}">
+  <div :id="postId" class="max-w-fit mt-2 bg-zinc-200 dark:text-white p-2 rounded-2xl dark:bg-zinc-900" :class="{'w-2/3': props.text.length > 150, 'ml-2': props.id !== 0, 'border-twitch border-l-2 dark:border-twitch dark:border-l-2': props.id === 0}">
     <div class="flex gap-2">
-      <p class="font-mono font-bold">{{ theme }}</p>
+      <p class="font-sans font-bold">{{ theme }}</p>
       <p :class="{'text-twitch': props.password === '73fd4da4', 'font-bold': props.password === '73fd4da4'}">
         {{ props.password === '73fd4da4' ? '' : name }}
       </p>
@@ -133,14 +135,20 @@ const repl = (id) => {
         </div>
       </div>
 
-      <!-- Отображение текста с обработанными ссылками -->
-      <p class="text-justify ml-2 whitespace-normal pt-2">
-        <span v-for="(part, index) in splitTextWithLinks" :key="index">
-          <span v-if="part.isLink" @click="scrollToElement(part.id)"
-            class="text-twitch hover:underline cursor-pointer">{{ '#' + part.text.slice(13, 21) }}</span>
-          <span v-else>{{ part.text }}</span>
-        </span>
-      </p>
+      <!-- whitespace-pre-line; inline; Отображение текста с обработанными ссылками -->
+      <div class="">
+        <p class="ml-2 pt-2 whitespace-normal break-words">
+          <span v-for="(part, index) in splitTextWithLinks" :key="index">
+            <span v-if="part.isLink" @click="scrollToElement(part.id)"
+              class="text-twitch hover:underline cursor-pointer">{{ '#' + part.text.slice(13, 21) }}</span>
+
+            <div v-else class="whitespace-normal break-words"> <vue-showdown :markdown="part.text" /> </div>
+          </span>
+          
+        </p>
+       
+      </div>
+
     </div>
 
     <div class="flex gap-2 ml-4 mt-2">

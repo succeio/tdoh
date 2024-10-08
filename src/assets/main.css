@@ -1,3 +1,36 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Стили для кода */
+code {
+  background-color: #f4f4f4;
+  padding: 2px 4px;
+  border-radius: 4px;
+  color: #772ce8;
+}
+
+/* Стили для блоков кода */
+pre {
+  background-color: #f4f4f4;
+  padding: 10px;
+  border-radius: 8px;
+  overflow-x: auto;
+}
+
+/* Сброс всех дефолтных стилей для blockquote */
+blockquote {
+  border-left: 2px solid #772ce8;
+  padding-left: 1em;
+  color: #772ce8;
+}
+
+/* Стили для ссылок */
+a {
+  color: #772ce8;
+  text-decoration: underline;
+}
+
+a:hover {
+  color: #772ce8;
+}

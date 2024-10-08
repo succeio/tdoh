@@ -28,3 +28,7 @@ coverage
 *.sw?
 
 *.tsbuildinfo
+
+# ai
+/src/app.js
+/src/duckai4o.js

@@ -12,8 +12,13 @@
   },
   "dependencies": {
     "@formkit/auto-animate": "^0.8.2",
+    "axios": "^1.7.7",
     "firebase": "^10.14.0",
-    "vue": "^3.4.29"
+    "katex": "^0.16.11",
+    "showdown": "^2.1.0",
+    "vue": "^3.4.29",
+    "vue-router": "^4.4.5",
+    "vue-showdown": "^4.2.0"
   },
   "devDependencies": {
     "@rushstack/eslint-patch": "^1.8.0",
