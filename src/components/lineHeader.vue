@@ -14,7 +14,7 @@ const fetchThreads = inject('fetchThreads')
 const a = (b) => {
   localStorage.setItem('boardState', b)
   localStorage.setItem('threadState', '')
-//  boardState1.value = localStorage.getItem('boardState')
+  //  boardState1.value = localStorage.getItem('boardState')
   fetchThreads()
 }
 </script>
@@ -30,14 +30,25 @@ const a = (b) => {
     </div>
 
     <div class="gap-4 pr-6 flex">
-      <div @click="a('Asylum')" class="hover:text-twitch dark:hover:text-black cursor-pointer select-none">
+      <div
+        @click="a('Asylum')"
+        class="hover:text-twitch dark:hover:text-black cursor-pointer select-none"
+      >
         Asylum
       </div>
-      <div @click="a('b')" class="hover:text-twitch dark:hover:text-black cursor-pointer select-none">b</div>
-      <div @click="a('dev')" class="hover:text-twitch dark:hover:text-black cursor-pointer select-none">dev</div>
-      <DarkModeSwitcher class="pl-8 select-none"   />
+      <div
+        @click="a('b')"
+        class="hover:text-twitch dark:hover:text-black cursor-pointer select-none"
+      >
+        b
+      </div>
+      <div
+        @click="a('dev')"
+        class="hover:text-twitch dark:hover:text-black cursor-pointer select-none"
+      >
+        dev
+      </div>
+      <DarkModeSwitcher class="pl-8 select-none" />
     </div>
   </div>
-
-
 </template>

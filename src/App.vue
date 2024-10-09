@@ -25,6 +25,13 @@ const route = useRoute();
 const router = useRouter();
 //----------- router
 
+// const zPage = () => {
+//   posts.value = []
+//   threads.value = []
+//   threadState.value = ''
+//   boardState.value = ''
+// }
+
 // Функция для полной загрузки данных onValue
 const fetchPosts = () => {
   threadState.value = localStorage.getItem('threadState') ? localStorage.getItem('threadState') : ''
