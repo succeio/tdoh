@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref, inject } from 'vue'
+import { computed, ref, inject, onMounted, onBeforeUnmount } from 'vue'
 import { VueShowdown }  from 'vue-showdown'
 
 const fetchPosts = inject('fetchPosts')
@@ -94,26 +94,100 @@ const repl = (id) => {
     }
   }, 100)
 }
+
+// Для управления позицией всплывающего поста
+const hoverPost = ref(null)
+const tooltipPosition = ref({ top: 0, left: 0 })
+
+// Обработчик для отображения поста при наведении
+const showPostPreview = (event, postId) => {
+  const element = document.getElementById(postId) // Ищем элемент по id
+  if (element) {
+    const postData = element.querySelector('#postData') // Находим элемент с id="postData"
+    const postCore = element.querySelector('#postCore') 
+    if (postData) {
+      // Извлекаем данные из элементов внутри postData
+      const postTheme = postData.querySelector('#post-theme')?.innerText || ' '
+      const postName = postData.querySelector('#post-name')?.innerText || ' '
+      const postPasscode = postData.querySelector('#post-passcode')?.innerText || ' '
+      const postTime = postData.querySelector('#post-time')?.innerText || ' ' 
+      const postDate = postData.querySelector('#post-date')?.innerText || ' '
+
+      // Извлекаем содержимое всех элементов с data-post-text
+      const postTextElements = postCore.querySelectorAll('[data-post-text]');
+      const postText = Array.from(postTextElements)
+        .map(el => el.innerText.trim()) // Извлекаем и очищаем текст
+        .filter(text => text.length > 0) // Фильтруем пустые тексты
+        .join(' ') || ''; // Объединяем все тексты в один
+
+      // Сохраняем данные в hoverPost для отображения в тултипе
+      hoverPost.value = {
+        postId,
+        theme: postTheme,
+        text: postText,
+        name: postName,
+        time: postTime,
+        data: postDate,
+        passcode: postPasscode
+      }
+
+
+
+      // Устанавливаем позицию тултипа рядом с курсором
+      tooltipPosition.value = { top: event.clientY + 10, left: event.clientX + 10 }
+    } else {
+      console.warn(`Элемент с id "postData" не найден внутри поста с id ${postId}.`)
+    }
+  } else {
+    console.warn(`Элемент с id ${postId} не найден.`)
+  }
+}
+
+const hidePostPreview = () => {
+  hoverPost.value = null
+}
+
+const updateTooltipPosition = (event) => {
+  tooltipPosition.value = { top: event.clientY + 10, left: event.clientX + 10 }
+}
+onBeforeUnmount
+// Обновляем позицию тултипа при движении мыши
+onMounted(() => {
+  window.addEventListener('mousemove', updateTooltipPosition)
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('mousemove', updateTooltipPosition)
+})
+
 </script>
 
 <template>
   <div :id="postId" class="max-w-fit mt-2 bg-zinc-200 dark:text-white p-2 rounded-2xl dark:bg-zinc-900" :class="{'w-2/3': props.text.length > 150, 'ml-2': props.id !== 0, 'border-twitch border-l-2 dark:border-twitch dark:border-l-2': props.id === 0}">
-    <div class="flex gap-2">
-      <p class="font-sans font-bold">{{ theme }}</p>
-      <p :class="{'text-twitch': props.password === '73fd4da4', 'font-bold': props.password === '73fd4da4'}">
+    <div id="postData" class="flex gap-2">
+      <p id="post-theme" class="font-sans font-bold">{{ theme }}</p>
+      <p id="post-name" :class="{'text-twitch': props.password === '73fd4da4', 'font-bold': props.password === '73fd4da4'}">
         {{ props.password === '73fd4da4' ? '' : name }}
       </p>
-      <p v-if="props.password" :class="{ 'text-twitch': isPasswordMatched, 'font-bold': isPasswordMatched }">
+      <p id="post-passcode" v-if="props.password" :class="{ 'text-twitch': isPasswordMatched, 'font-bold': isPasswordMatched }">
         {{ displayValue }}
       </p>
-      <p>{{ time }}</p>
+      <p id="post-time">{{ time }}</p>
       <p v-if="props.day">{{ day }}</p>
-      <p>{{ data }}</p>
+      <p id="post-date">{{ data }}</p>
       <p @click="getPostId(postId)" class="hover:text-twitch cursor-pointer">
         #{{ postId ? postId.slice(12, 20) : postId }}
       </p>
-      <p class="hover:text-twitch cursor-pointer">🍌{{ id === 0 ? '0P' : id }}</p>
-      <p v-if="id === 0" @click="openThread(threadId)" class="hover:cursor-pointer">🍆</p>
+      <p class="hover:text-twitch cursor-pointer text-green-600">{{ id === 0 ? '0P' : id }}</p>
+      <p v-if="id === 0" @click="openThread(threadId)" class="hover:cursor-pointer">
+        
+            <img
+        src="../assets/right-circle.svg" 
+        alt="Icon"
+        class="h-4 w-4 mr-2 mt-1.5 dark:rounded-2xl dark:bg-twitch" 
+    />
+
+        </p>
       <p v-if="props.opcountposts" @click="openThread(theme, board)" class="hover:text-twitch cursor-pointer">
         posts: {{ opcountposts }}
       </p>
@@ -136,13 +210,13 @@ const repl = (id) => {
       </div>
 
       <!-- whitespace-pre-line; inline; Отображение текста с обработанными ссылками -->
-      <div class="">
+      <div id="postCore" class="">
         <p class="ml-2 pt-2 whitespace-normal break-words">
           <span v-for="(part, index) in splitTextWithLinks" :key="index">
-            <span v-if="part.isLink" @click="scrollToElement(part.id)"
+            <span v-if="part.isLink" @click="scrollToElement(part.id)"  @mouseover="showPostPreview($event, part.id)" @mouseleave="hidePostPreview"
               class="text-twitch hover:underline cursor-pointer">{{ '#' + part.text.slice(13, 21) }}</span>
 
-            <div v-else class="whitespace-normal break-words"> <vue-showdown :markdown="part.text" /> </div>
+            <div :data-post-text="index" v-else class="whitespace-normal break-words markdown"> <vue-showdown :markdown="part.text" /> </div>
           </span>
           
         </p>
@@ -153,10 +227,33 @@ const repl = (id) => {
 
     <div class="flex gap-2 ml-4 mt-2">
       <div class="" v-for="reply in props.replies" :key="reply.id">
-        <p class="cursor-pointer hover:text-twitch" @click="repl(reply)">
+        <p class="cursor-pointer hover:text-twitch" @click="repl(reply)" @mouseover="showPostPreview($event, reply)" @mouseleave="hidePostPreview">
           #{{ reply ? reply.slice(13, 20) : '' }}
         </p>
       </div>
     </div>
+
+<!-- Tooltip для отображения поста -->
+<div v-if="hoverPost" 
+     :style="{ top: tooltipPosition.top + 'px', left: tooltipPosition.left + 'px' }" 
+     class="fixed bg-black dark:bg-twitch text-white p-2 rounded-2xl shadow-lg max-w-md">
+  
+  <!-- Верхняя часть тултипа с информацией о посте -->
+  <div class="flex flex-wrap gap-1 ">
+    <p>{{ hoverPost.theme }}</p>
+    <p>{{ hoverPost.name }}</p>
+    <p> {{ hoverPost.passcode }}</p>
+    <p> {{ hoverPost.time }}</p>
+    <p> {{ hoverPost.data }}</p>
+    <p>#{{ hoverPost.postId.slice(12, 20) }}</p>
+  </div>
+
+  <!-- Текст содержимого поста -->
+  <div>
+    <p class="pl-4 pt-2 pb-2">{{ hoverPost.text }}</p>
+  </div>
+
+</div>
+
   </div>
 </template>

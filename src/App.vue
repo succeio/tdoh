@@ -7,7 +7,6 @@ import { ref as dbRef, onValue, limitToFirst, query, get, orderByChild } from 'f
 import PostListTemplate from './components/postListTemplate.vue'
 import PostTemplate from './components/postTemplate.vue'
 
-//import MainHeader from './components/mainHeader.vue';
 import SendData from './components/sendData.vue'
 import LineHeader from './components/lineHeader.vue'
 import MainEnd from './components/mainEnd.vue';
@@ -45,7 +44,6 @@ const fetchPosts = () => {
       posts.value = Object.values(data) // Преобразуем объект постов в массив
       localStorage.setItem('theme', posts.value[0].theme)
       themeState.value = posts.value[0].theme //localStorage.getItem('theme')
-      console.log(themeState.value)
       threads.value = []
     } else {
       posts.value = []

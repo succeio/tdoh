@@ -254,11 +254,128 @@ onMounted(
   },
   generateEmojis()
 )
+
+const addBold = () => {
+      const textarea = document.querySelector('textarea');
+      const start = textarea.selectionStart;
+      const end = textarea.selectionEnd;
+
+      // Получаем выделенный текст
+      const selectedText = postText.value.substring(start, end);
+
+      if (selectedText) {
+        // Обрамляем выделенный текст
+        const wrappedText = `**${selectedText}**`;
+
+        // Обновляем текст с обрамленным выделением
+        postText.value = postText.value.substring(0, start) + wrappedText + postText.value.substring(end);
+        
+        // Сбрасываем выделение
+        textarea.focus();
+        textarea.setSelectionRange(start, start + wrappedText.length);
+      } else {
+        // Если ничего не выбрано, добавляем ** **
+        const wrappedText = '** **';
+        postText.value = postText.value.substring(0, start) + wrappedText + postText.value.substring(end);
+        
+        // Устанавливаем курсор между звездочками
+        textarea.focus();
+        textarea.setSelectionRange(start + 3, start + 3); // Устанавливаем курсор между ** **
+      }
+}
+
+const addCode = () => {
+      const textarea = document.querySelector('textarea');
+      const start = textarea.selectionStart;
+      const end = textarea.selectionEnd;
+
+      // Получаем выделенный текст
+      const selectedText = postText.value.substring(start, end);
+
+      if (selectedText) {
+        // Обрамляем выделенный текст
+        const wrappedText = `\`${selectedText}\``;
+
+        // Обновляем текст с обрамленным выделением
+        postText.value = postText.value.substring(0, start) + wrappedText + postText.value.substring(end);
+        
+        // Сбрасываем выделение
+        textarea.focus();
+        textarea.setSelectionRange(start, start + wrappedText.length);
+      } else {
+        // Если ничего не выбрано, добавляем ` `
+        const wrappedText = `\` \``;
+        postText.value = postText.value.substring(0, start) + wrappedText + postText.value.substring(end);
+        
+        // Устанавливаем курсор между звездочками
+        textarea.focus();
+        textarea.setSelectionRange(start + 3, start + 3); // Устанавливаем курсор между ` `
+      }
+}
+
+const addLink = () => {
+      const textarea = document.querySelector('textarea');
+      const start = textarea.selectionStart;
+      const end = textarea.selectionEnd;
+
+      // Получаем выделенный текст
+      const selectedText = postText.value.substring(start, end);
+
+      if (selectedText) {
+        // Обрамляем выделенный текст
+        const wrappedText = `[${selectedText}](${selectedText})`;
+
+        // Обновляем текст с обрамленным выделением
+        postText.value = postText.value.substring(0, start) + wrappedText + postText.value.substring(end);
+        
+        // Сбрасываем выделение
+        textarea.focus();
+        textarea.setSelectionRange(start, start + wrappedText.length);
+      } else {
+        // Если ничего не выбрано, добавляем [ ]( )
+        const wrappedText = `[ ]( )`;
+        postText.value = postText.value.substring(0, start) + wrappedText + postText.value.substring(end);
+        
+        // Устанавливаем курсор между звездочками
+        textarea.focus();
+        textarea.setSelectionRange(start + 3, start + 3); // Устанавливаем курсор между [ ]( )
+      }
+}
+
+const addQuote = () => {
+      const textarea = document.querySelector('textarea');
+      const start = textarea.selectionStart;
+      const end = textarea.selectionEnd;
+
+      // Получаем выделенный текст
+      const selectedText = postText.value.substring(start, end);
+
+      if (selectedText) {
+        // Обрамляем выделенный текст
+        const wrappedText = `>${selectedText}`;
+
+        // Обновляем текст с обрамленным выделением
+        postText.value = postText.value.substring(0, start) + wrappedText + postText.value.substring(end);
+        
+        // Сбрасываем выделение
+        textarea.focus();
+        textarea.setSelectionRange(start, start + wrappedText.length);
+      } else {
+        // Если ничего не выбрано, добавляем >
+        const wrappedText = `>`;
+        postText.value = postText.value.substring(0, start) + wrappedText + postText.value.substring(end);
+        
+        // Устанавливаем курсор между звездочками
+        textarea.focus();
+        textarea.setSelectionRange(start + 3, start + 3); // Устанавливаем курсор между >
+      }
+}
+
 </script>
 
 <template>
   <div class="container p-4">
-    <div class="form-group w-2/3">
+    <div class="form-group w-2/3 min-w-max">
       <div class="flex gap-2">
         <input
           v-model="postName"
@@ -280,28 +397,22 @@ onMounted(
         />
       </div>
 
-      <div class="flex mt-2 relative">
-        <textarea
-          @keyup.shift.enter="sendPost"
-          v-model="postText"
-          placeholder="post"
-          class="flex-1 text-sm p-2 ring-1 ring-slate-900/10 shadow-sm rounded-md focus:outline-none focus:ring-2 focus:ring-pink-500 caret-pink-500 dark:bg-zinc-800 dark:ring-0 dark:highlight-white/5 dark:focus:ring-2 dark:focus:ring-pink-500 dark:focus:bg-zinc-900 dark:text-white"
-          rows="4"
-        ></textarea>
-        <div
-          :class="{
-            'text-red-500': postText.length > 250,
-            'text-zinc-700': postText.length <= 250,
-            'select-none': true
-          }"
-          class="absolute bottom-2 right-2"
-        >
-          {{ postText.length }}/250
-        </div>
-      </div>
+<div class="flex flex-col mt-2">
+  <textarea
+    @keyup.shift.enter="sendPost"
+    v-model="postText"
+    placeholder="post"
+    class="flex-1 text-sm p-2 ring-1 ring-slate-900/10 shadow-sm rounded-md focus:outline-none focus:ring-2 focus:ring-pink-500 caret-pink-500 dark:bg-zinc-800 dark:ring-0 dark:highlight-white/5 dark:focus:ring-2 dark:focus:ring-pink-500 dark:focus:bg-zinc-900 dark:text-white"
+    rows="4"
+  ></textarea>
 
-      <div class="form-group w-2/3 mt-2">
-        <div class="flex items-center pb-4 mt-2">
+ 
+</div>
+
+
+
+      <div class="form-group mt-2">
+        <div class="flex items-center pb-4 mt-2 ">
           <input
             v-model="postUrl"
             placeholder="url"
@@ -315,11 +426,26 @@ onMounted(
             Post
           </button>
 
+          <div class="" >
+          <a href="https://imgur.com/upload" target="_blank" rel="noopener noreferrer">
+              <img
+                  src="../assets/clip.svg" 
+                  alt="Icon"
+                  class="w-6 ml-2 dark:rounded-2xl dark:bg-twitch" 
+              />
+          </a>          
+            </div>
 
-        </div>
+          <div class="flex">
+            <button class="text-sm dark:bg-twitch ml-2 bg-black text-white rounded-full min-w-8" @click="addBold">B</button>
+            <button class="text-sm dark:bg-twitch ml-2 bg-black text-white rounded-full min-w-8" @click="addCode">C</button>
+            <button class="text-sm dark:bg-twitch ml-2 bg-black text-white rounded-full min-w-8" @click="addLink">L</button>
+            <button class="dark:bg-twitch ml-2 bg-black text-white rounded-2xl p-1 min-w-8" @click="addQuote">Q</button>
+          </div>
+          </div> 
       </div>
 
-          <div class="flex bg-black w-2/3 rounded-2xl text-white p-1 dark:bg-twitch">
+          <div class="flex bg-black w-2/3 rounded-2xl text-white p-1 dark:bg-twitch min-w-max">
             <p class="ml-2">Найдите {{ generatedEmoji }}: </p>
             <div class="flex gap-2 pl-4">
               <div
@@ -330,8 +456,7 @@ onMounted(
               </div>
             </div>
           <div class="pl-4" v-if=(checkSelection)>{{ resultMessage }}</div>
-          </div>
-
+          </div>   
     </div>
   </div>
 </template>
