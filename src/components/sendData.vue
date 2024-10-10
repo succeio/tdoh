@@ -472,7 +472,7 @@ const addQuote = () => {
               <img
                 src="../assets/clip.svg"
                 alt="Icon"
-                class="w-6 ml-2 dark:rounded-2xl dark:bg-twitch"
+                class="p-1 w-8 ml-2 dark:rounded-2xl dark:bg-twitch"
               />
             </a>
           </div>

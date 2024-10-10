@@ -1,9 +1,16 @@
 <script setup>
+import { database } from '../firebase'
+import { ref as dbRef, update, onValue } from 'firebase/database'
 import { computed, ref, inject, onMounted, onBeforeUnmount } from 'vue'
 import { VueShowdown } from 'vue-showdown'
 
 const fetchPosts = inject('fetchPosts')
 const getPostId = inject('getPostId')
+
+const boardState = ref('')
+const prms = ref('')
+const keys = ref([])
+const root = localStorage.getItem('xf')
 
 const props = defineProps({
   id: Number,
@@ -19,6 +26,41 @@ const props = defineProps({
   postId: String,
   replies: Array
 })
+
+
+const del = async (threadId, postId) => {
+  boardState.value = localStorage.getItem('boardState')
+  prms.value = await hashString(localStorage.getItem('xf'))
+  prms.value = await hashString(prms.value)
+
+  const keyRef = dbRef(database, `xf/xx/-O8pvIYAqJwO5UCMrbwv`)
+
+   onValue(keyRef, (snapshot) => {
+    const data = snapshot.val()
+    keys.value = Object.values(data)
+   }) 
+
+  if (keys.value[0] == prms.value){
+    const postRef = dbRef(database, `${boardState.value}/${threadId}/${postId}`)
+    update(postRef, { text: '*Пост был изъят.*'})
+    update(postRef, { url: ''})
+    update(postRef, { theme: ''})
+    update(postRef, { name: 'Аноним'})
+    update(postRef, { password: ''})
+    console.log('OK')    
+  } else {
+    console.log('DENIED')
+  }
+}
+
+const hashString = async (input) => {
+  const encoder = new TextEncoder()
+  const data = encoder.encode(input)
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data)
+  const hashArray = Array.from(new Uint8Array(hashBuffer))
+  const hashHex = hashArray.map((b) => b.toString(16).padStart(2, '0')).join('')
+  return hashHex.substring(8, 16)
+}
 
 const openThread = (thread) => {
   localStorage.setItem('threadState', thread)
@@ -42,6 +84,14 @@ const isTwitch = computed(() => {
 
 const link = ref('')
 link.value = props.url.match(/twitch\.tv\/([^/]+)/) ? props.url.match(/twitch\.tv\/([^/]+)/) : ''
+
+const isSoundCloud = computed(() => {
+  return /api\.soundcloud\.com/i.test(props.url);  
+})
+
+const scLink = ref('')
+scLink.value = props.url.match(/(api\.soundcloud\.com\/tracks\/\d+)/i) ? props.url.match(/(api\.soundcloud\.com\/tracks\/\d+)/i) : ''
+
 
 const passwordMap = ref([{ password: '6da027bf', value: '🍇🌚🍤coyc' }])
 
@@ -178,7 +228,7 @@ onBeforeUnmount(() => {
           'font-bold': props.password === '73fd4da4'
         }"
       >
-        {{ props.password === '73fd4da4' ? '' : name }}
+        {{ name }}
       </p>
       <p
         id="post-passcode"
@@ -201,6 +251,7 @@ onBeforeUnmount(() => {
           class="h-4 w-4 mr-2 mt-1.5 dark:rounded-2xl dark:bg-twitch"
         />
       </p>
+      <p v-show="root" @click="del(props.threadId, props.postId)"  class="font-bold hover:cursor-pointer" >X</p>
       <p
         v-if="props.opcountposts"
         @click="openThread(theme, board)"
@@ -219,7 +270,7 @@ onBeforeUnmount(() => {
           alt="post-pic"
         />
         <video
-          v-if="isVideo"
+          v-if="isVideo && !isTwitch"
           class="hover:transition duration-150 max-w-72 hover:max-w-md bg-white rounded-2xl cursor-pointer"
           :src="url"
           controls
@@ -234,9 +285,11 @@ onBeforeUnmount(() => {
           height="240"
           width="426"
         ></iframe>
-        <div class="max-w-fit p-1 mt-2 font-bold bg-twitch text-white rounded-2xl" v-if="isTwitch">
-          <p>{{ url }}</p>
-        </div>
+
+        <iframe v-if="isSoundCloud" 
+        width="100%" height="300" scrolling="no" frameborder="no" allow="autoplay" 
+        :src="`https://w.soundcloud.com/player/?url=https%3A//${scLink[0]}&color=%23ff5500&auto_play=false&hide_related=false&show_comments=true&show_user=true&show_reposts=false&show_teaser=true&visual=true`"></iframe><div style="font-size: 10px; color: #cccccc;line-break: anywhere;word-break: normal;overflow: hidden;white-space: nowrap;text-overflow: ellipsis; font-family: Interstate,Lucida Grande,Lucida Sans Unicode,Lucida Sans,Garuda,Verdana,Tahoma,sans-serif;font-weight: 100;"><a href="" title="" target="_blank" style="color: #cccccc; text-decoration: none;"></a> · <a href="" title="colder than she" target="_blank" style="color: #cccccc; text-decoration: none;"></a></div>
+
       </div>
 
       <!-- whitespace-pre-line; inline; Отображение текста с обработанными ссылками -->
