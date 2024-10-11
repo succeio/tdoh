@@ -11,6 +11,7 @@ import SendData from './components/sendData.vue'
 import LineHeader from './components/lineHeader.vue'
 import MainEnd from './components/mainEnd.vue';
 import MiniHeader from './components/miniHeader.vue';
+import NullPage from './components/nullPage.vue';
 
 const posts = ref([])
 const threads = ref([])
@@ -25,12 +26,17 @@ const route = useRoute();
 const router = useRouter();
 //----------- router
 
-// const zPage = () => {
-//   posts.value = []
-//   threads.value = []
-//   threadState.value = ''
-//   boardState.value = ''
-// }
+const startPage = () => {
+  posts.value = []
+  threads.value = []
+  threadState.value = ''
+  boardState.value = ''
+  themeState.value = ''
+  localStorage.setItem('boardState', '')
+  localStorage.setItem('threadState', '')
+  router.push({ path: `/` })
+
+}
 
 // Функция для полной загрузки данных onValue
 const fetchPosts = () => {
@@ -70,7 +76,7 @@ const fetchThreads = async () => {
     const sectionRef = query(
       dbRef(database, boardState.value),
       orderByChild('timestamp'), // Сортировка по timestamp
-      limitToFirst(10) // Ограничиваем количество тредов до 10 (можно изменить)
+      limitToFirst(20) // Ограничиваем количество тредов до 20 (можно изменить)
     )
 
     const snapshot = await get(sectionRef)
@@ -112,8 +118,9 @@ const getPostId = (id) => {
 provide('getPostId', getPostId)
 provide('fetchPosts', fetchPosts)
 provide('fetchThreads', fetchThreads)
+provide('startPage', startPage)
 
-const state = ref(false)
+const state = ref(!false)
 
 //------------------router
 
@@ -126,7 +133,7 @@ const updateStateFromRoute = (board, thread) => {
     boardState.value = board;
     localStorage.setItem('boardState', boardState.value);
   } else {
-    boardState.value = 'Asylum';
+    boardState.value = '';
     localStorage.setItem('boardState', boardState.value);
   }
 
@@ -138,9 +145,9 @@ const updateStateFromRoute = (board, thread) => {
     localStorage.setItem('threadState', threadState.value);
   }
 
-  if (threadState.value) {
+  if (threadState.value && boardState.value) {
     fetchPosts();  // Если указан threadState, загружаем посты
-  } else {
+  } else if (boardState.value) {
     fetchThreads();  // Иначе загружаем темы
   }
 };
@@ -170,13 +177,15 @@ watch(() => route.fullPath, () => {updateStateFromRoute(route.params.board, rout
       </div>
 
       <div class="max-w-4xl">
-        <SendData v-if="!state && !threadState" :reply-id="postId" />
+        <SendData v-if="!state && !threadState && boardState" :reply-id="postId" />
       </div>
+
+      <NullPage v-if="!boardState" />
 
       <div class="ml-4">
         <PostListTemplate v-if="threadState" :posts="posts" />
 
-        <div v-auto-animate>
+        <div v-auto-animate >
           <div v-if="threads.length">
             <div v-for="(thread, threadIndex) in threads" :key="threadIndex">
               <div class="pt-4" v-if="thread.posts.length">

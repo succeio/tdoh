@@ -161,7 +161,7 @@ const sendPost = async () => {
         password: postPassword.value ? hashedString.value : '',
         theme: postTheme.value.length < 25 ? postTheme.value : postTheme.value.slice(0, 25),
         text: postText.value,
-        url: postUrl.value.length < 25 ? postUrl.value : '',
+        url: postUrl.value.length < 100 ? postUrl.value : '',
         time: new Date().toLocaleTimeString('ru-RU', {
           timeZone: 'Europe/Moscow',
           hour: '2-digit',

@@ -92,6 +92,13 @@ const isSoundCloud = computed(() => {
 const scLink = ref('')
 scLink.value = props.url.match(/(api\.soundcloud\.com\/tracks\/\d+)/i) ? props.url.match(/(api\.soundcloud\.com\/tracks\/\d+)/i) : ''
 
+// Проверка, содержит ли строка youtube.com
+const isYouTube = computed(() => {
+  return props.url ? props.url.includes('youtube.com') : false
+})
+const ytLink = ref('')
+ytLink.value = props.url.match(/(?:https?:\/\/)?(?:www\.)?youtube\.com\/watch\?v=([a-zA-Z0-9_-]+)/i) ? props.url.match(/(?:https?:\/\/)?(?:www\.)?youtube\.com\/watch\?v=([a-zA-Z0-9_-]+)/i)[1] : '';
+
 
 const passwordMap = ref([{ password: '6da027bf', value: '🍇🌚🍤coyc' }])
 
@@ -207,6 +214,13 @@ onMounted(() => {
 onBeforeUnmount(() => {
   window.removeEventListener('mousemove', updateTooltipPosition)
 })
+
+const isEnlarged = ref(false); // Using the Composition API
+
+const toggleImageSize = () => {
+  isEnlarged.value = !isEnlarged.value; // Toggle the state
+};
+
 </script>
 
 <template>
@@ -265,15 +279,17 @@ onBeforeUnmount(() => {
       <div class="gap-2 mt-2">
         <img
           v-if="isImage"
-          class="hover:transition duration-150 max-w-48 hover:max-w-md bg-white rounded-2xl cursor-pointer"
+          :class="['transition-all duration-150 bg-white rounded-2xl cursor-pointer', isEnlarged ? 'max-w-md' : 'max-w-48']"
           :src="url"
           alt="post-pic"
+          @click="toggleImageSize"
         />
         <video
           v-if="isVideo && !isTwitch"
-          class="hover:transition duration-150 max-w-72 hover:max-w-md bg-white rounded-2xl cursor-pointer"
+          :class="['transition-all duration-150 bg-white rounded-2xl cursor-pointer', isEnlarged ? 'max-w-lg' : 'max-w-sm']"
           :src="url"
           controls
+          @click="toggleImageSize"
         ></video>
         <iframe
           v-if="isTwitch"
@@ -286,10 +302,12 @@ onBeforeUnmount(() => {
           width="426"
         ></iframe>
 
-        <iframe v-if="isSoundCloud" 
+        <iframe class="rounded-2xl" v-if="isSoundCloud" 
         width="100%" height="300" scrolling="no" frameborder="no" allow="autoplay" 
-        :src="`https://w.soundcloud.com/player/?url=https%3A//${scLink[0]}&color=%23ff5500&auto_play=false&hide_related=false&show_comments=true&show_user=true&show_reposts=false&show_teaser=true&visual=true`"></iframe><div style="font-size: 10px; color: #cccccc;line-break: anywhere;word-break: normal;overflow: hidden;white-space: nowrap;text-overflow: ellipsis; font-family: Interstate,Lucida Grande,Lucida Sans Unicode,Lucida Sans,Garuda,Verdana,Tahoma,sans-serif;font-weight: 100;"><a href="" title="" target="_blank" style="color: #cccccc; text-decoration: none;"></a> · <a href="" title="colder than she" target="_blank" style="color: #cccccc; text-decoration: none;"></a></div>
-
+        :src="`https://w.soundcloud.com/player/?url=https%3A//${scLink[0]}&color=%23ff5500&auto_play=false&hide_related=false&show_comments=true&show_user=true&show_reposts=false&show_teaser=true&visual=true`"></iframe>
+      
+      <iframe class="rounded-2xl" v-if="isYouTube" width="460" height=260 :src="`https://www.youtube.com/embed/${ytLink}`" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+      
       </div>
 
       <!-- whitespace-pre-line; inline; Отображение текста с обработанными ссылками -->
