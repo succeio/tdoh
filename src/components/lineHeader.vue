@@ -14,6 +14,7 @@ const fetchThreads = inject('fetchThreads')
 const a = (b) => {
   localStorage.setItem('boardState', b)
   localStorage.setItem('threadState', '')
+  document.title = `🍤 shrmpch`
   fetchThreads()
 }
 

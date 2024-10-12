@@ -194,7 +194,7 @@ const showPostPreview = (event, postId) => {
       console.warn(`Элемент с id "postData" не найден внутри поста с id ${postId}.`)
     }
   } else {
-    console.warn(`Элемент с id ${postId} не найден.`)
+    //console.warn(`Элемент с id ${postId} не найден.`)
   }
 }
 
