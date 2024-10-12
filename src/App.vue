@@ -169,6 +169,12 @@ const fetchThreads = async () => {
 
 const getPostId = (id) => {
   postId.value = id
+  if (threadState.value) {
+    window.scrollTo({
+      top: document.body.scrollHeight,
+      behavior: 'smooth'
+    })
+  }
 }
 
 provide('getPostId', getPostId)
@@ -254,7 +260,7 @@ onUnmounted(() => {
     <div class="min-h-screen bg-white dark:bg-black rounded-t-2xl">
       <div class="pt-4">
         <button
-          v-if="!threadState"
+          v-if="!threadState && boardState"
           @click="
             () => {
               state = !state

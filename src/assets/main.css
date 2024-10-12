@@ -41,3 +41,8 @@ a:hover {
   height: auto;
   /* Сохраняет пропорции изображения */
 }
+
+.glow-purple {
+  box-shadow: 0 0 2px #772ce8, 0 0 4px #772ce8, 0 0 8px #772ce8;
+  transition: box-shadow 0.3s ease-in-out;
+}

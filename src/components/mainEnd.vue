@@ -22,17 +22,18 @@ const scrollToTop = () => {
       <div @click="a('Anime')" class="hover:text-twitch cursor-pointer">Аниме</div>
       <div @click="a('Asylum')" class="hover:text-twitch cursor-pointer">Asylum</div>
       <div @click="a('b')" class="hover:text-twitch cursor-pointer">Бред</div>
-      <div @click="a('Videogames')" class="hover:text-twitch cursor-pointer">Видеоигры</div>
-      <div @click="a('VisualNovels')" class="hover:text-twitch cursor-pointer">Визуальные новеллы</div>
-      <div @click="a('Gamedev')" class="hover:text-twitch cursor-pointer">Gamedev</div> 
+      <div @click="a('vg')" class="hover:text-twitch cursor-pointer">Видеоигры</div>
+      <div @click="a('vn')" class="hover:text-twitch cursor-pointer">Визуальные новеллы</div>
+      <div @click="a('gd')" class="hover:text-twitch cursor-pointer">Gamedev</div> 
       <div @click="a('Art')" class="hover:text-twitch cursor-pointer">Искусство</div>
-      <div @click="a('Consoles')" class="hover:text-twitch cursor-pointer">Консоли</div>
+      <div @click="a('cg')" class="hover:text-twitch cursor-pointer">Консоли</div>
       <div @click="a('Manga')" class="hover:text-twitch cursor-pointer">Манга</div>
-      <div @click="a('MobileDevices')" class="hover:text-twitch cursor-pointer">Мобильные устройства</div>
-      <div @click="a('BoardGames')" class="hover:text-twitch cursor-pointer">Настольные игры</div>
+      <div @click="a('md')" class="hover:text-twitch cursor-pointer">Мобильные устройства</div>
+      <div @click="a('bg')" class="hover:text-twitch cursor-pointer">Настольные игры</div>
       <div @click="a('Paranormal')" class="hover:text-twitch cursor-pointer">Паранормальное</div>
-      <div @click="a('Programming')" class="hover:text-twitch cursor-pointer">Программирование</div>
-      <div @click="a('Technology')" class="hover:text-twitch cursor-pointer">Техника</div>
+      <div @click="a('pr')" class="hover:text-twitch cursor-pointer">Программирование</div>
+      <div @click="a('dev')" class="hover:text-twitch cursor-pointer">Разработка борды</div>
+      <div @click="a('tech')" class="hover:text-twitch cursor-pointer">Техника</div>
     </div>
 
     <div class="pt-1 text-center">

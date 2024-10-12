@@ -41,7 +41,7 @@ const del = async (threadId, postId) => {
    }) 
 
   if (keys.value[0] == prms.value){
-    const postRef = dbRef(database, `${boardState.value}/${threadId}/${postId}`)
+    const postRef = dbRef(database, `${boardState.value}/${threadId}/posts/${postId}`)
     update(postRef, { text: '*Пост был изъят.*'})
     update(postRef, { url: ''})
     update(postRef, { theme: ''})
@@ -77,14 +77,6 @@ const isVideo = computed(() => {
   return /\.(mp4|webm|ogg)$/i.test(props.url)
 })
 
-// Проверка, содержит ли строка twitch.tv
-const isTwitch = computed(() => {
-  return props.url ? props.url.includes('twitch.tv') : false
-})
-
-const link = ref('')
-link.value = props.url.match(/twitch\.tv\/([^/]+)/) ? props.url.match(/twitch\.tv\/([^/]+)/) : ''
-
 const isSoundCloud = computed(() => {
   return /api\.soundcloud\.com/i.test(props.url);  
 })
@@ -118,6 +110,15 @@ const scrollToElement = (id) => {
   const element = document.getElementById(id)
   if (element) {
     element.scrollIntoView({ behavior: 'smooth' })
+
+    // Добавляем класс для подсветки
+    element.classList.add('glow-purple')
+
+    // Убираем подсветку через 2 секунды
+    setTimeout(() => {
+      element.classList.remove('glow-purple')
+    }, 2000)
+
   }
 }
 
@@ -145,6 +146,17 @@ const repl = (id) => {
         top: elementPosition,
         behavior: 'smooth'
       })
+
+
+    // Добавляем класс для подсветки
+    element.classList.add('glow-purple')
+
+    // Убираем подсветку через 2 секунды
+    setTimeout(() => {
+      element.classList.remove('glow-purple')
+    }, 2000)
+
+
     } else {
       console.warn(`Element with id "${id}" not found.`)
     }
@@ -258,7 +270,7 @@ const toggleImageSize = () => {
         #{{ postId ? postId.slice(12, 20) : postId }}
       </p>
       <p class="hover:text-twitch cursor-pointer text-green-600">{{ id === 0 ? '0P' : id }}</p>
-      <p v-if="id === 0" @click="openThread(threadId)" class="hover:cursor-pointer">
+      <p v-if="id === 0" @keyup.ctrl.left="openThread(threadId)" @click="openThread(threadId)" class="hover:cursor-pointer">
         <img
           src="../assets/right-circle.svg"
           alt="Icon"
@@ -277,6 +289,7 @@ const toggleImageSize = () => {
 
     <div class="gap-2 flex">
       <div class="gap-2 mt-2">
+        
         <img
           v-if="isImage"
           :class="['transition-all duration-150 bg-white rounded-2xl cursor-pointer', isEnlarged ? 'max-w-md' : 'max-w-48']"
@@ -284,6 +297,7 @@ const toggleImageSize = () => {
           alt="post-pic"
           @click="toggleImageSize"
         />
+
         <video
           v-if="isVideo && !isTwitch"
           :class="['transition-all duration-150 bg-white rounded-2xl cursor-pointer', isEnlarged ? 'max-w-lg' : 'max-w-sm']"
@@ -291,16 +305,6 @@ const toggleImageSize = () => {
           controls
           @click="toggleImageSize"
         ></video>
-        <iframe
-          v-if="isTwitch"
-          class="rounded-2xl"
-          :src="`https://player.twitch.tv/?channel=${link[1]}&parent=localhost&autoplay=false`"
-          frameborder="0"
-          allowfullscreen="true"
-          scrolling="no"
-          height="240"
-          width="426"
-        ></iframe>
 
         <iframe class="rounded-2xl" v-if="isSoundCloud" 
         width="100%" height="300" scrolling="no" frameborder="no" allow="autoplay" 
