@@ -81,8 +81,8 @@ const sendPost = async () => {
       const newPost = {
         name: postName.value ? (postName.value.length > 25 ? postName.value.slice(0, 25) : postName.value) : 'Аноним',
         password: postPassword.value ? hashedString.value : '',
-        theme: postTheme.value.length < 25 ? postTheme.value : postTheme.value.slice(0, 25),
-        text: postText.value,
+        theme: postTheme.value.length < 45 ? postTheme.value : postTheme.value.slice(0, 25),
+        text: (/ {4,}/.test(postText.value)) ? postText.value.replace(/ {4,}/g, ' ') : postText.value,
         url: postUrl.value.length < 100 ? (imgSize.value !== 0 ? (imgSize.value < 4000000 ? postUrl.value : '') : postUrl.value) : '',
         time: new Date().toLocaleTimeString('ru-RU', {
           timeZone: 'Europe/Moscow',
@@ -173,8 +173,8 @@ const sendPost = async () => {
       const newPost = {
         name: postName.value ? (postName.value.length > 25 ? postName.value.slice(0, 25) : postName.value) : 'Аноним',
         password: postPassword.value ? hashedString.value : '',
-        theme: postTheme.value.length < 25 ? postTheme.value : postTheme.value.slice(0, 25),
-        text: postText.value,
+        theme: postTheme.value.length < 45 ? postTheme.value : postTheme.value.slice(0, 25),
+        text: (/ {4,}/.test(postText.value)) ? postText.value.replace(/ {4,}/g, ' ') : postText.value,
         url: postUrl.value.length < 100 ? postUrl.value : '',
         time: new Date().toLocaleTimeString('ru-RU', {
           timeZone: 'Europe/Moscow',
