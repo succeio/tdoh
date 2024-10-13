@@ -65,54 +65,6 @@ const fetchPosts = () => {
   })
 }
 
-// const fetchThreads = async () => {
-//   themeState.value = ''
-//   threadState.value = localStorage.getItem('threadState')
-//   threads.value = []
-//   const boardState = ref(localStorage.getItem('boardState'))
-
-//   router.push({ path: `/${boardState.value}/${threadState.value}` })
-
-//   try {
-//     const sectionRef = query(
-//       dbRef(database, boardState.value),
-//       orderByChild('timestamp'), // Сортировка по timestamp
-//       limitToFirst(20) // Ограничиваем количество тредов до 20 (можно изменить)
-//     )
-
-//     const snapshot = await get(sectionRef)
-
-//     if (snapshot.exists()) {
-//       const threadsData = snapshot.val()
-//       const threadEntries = Object.entries(threadsData).reverse() // Обратный порядок (от новых к старым)
-
-//       // Используем Promise.all для параллельной загрузки первых 5 постов каждого треда
-//       const threadPromises = threadEntries.map(async ([threadKey]) => {
-//         const threadRef = query(
-//           dbRef(database, `${boardState.value}/${threadKey}/`),
-//           limitToFirst(5) // Ограничиваем запрос до 5 первых постов
-//         )
-
-//         const threadSnapshot = await get(threadRef)
-//         const postsData = threadSnapshot.val()
-
-//         return {
-//           threadKey,
-//           posts: postsData ? Object.values(postsData) : []
-//         }
-//       })
-
-//       // Выполняем все запросы параллельно и ждем их завершения
-//       threads.value = await Promise.all(threadPromises)
-//     }
-//   } catch (error) {
-//     console.error('Ошибка при загрузке тредов:', error)
-//   }
-
-//   return threads.value // Возвращаем массив тредов
-// }
-
-
 const fetchThreads = async () => {
   themeState.value = ''
   threadState.value = localStorage.getItem('threadState')
@@ -168,14 +120,22 @@ const fetchThreads = async () => {
 }
 
 const getPostId = (id) => {
-  postId.value = id
+  if (postId.value === id) {
+    postId.value = null; // сброс значения
+    setTimeout(() => {
+      postId.value = id;
+    });
+  } else {
+    postId.value = id;
+  }
+
   if (threadState.value) {
     window.scrollTo({
       top: document.body.scrollHeight,
       behavior: 'smooth'
-    })
+    });
   }
-}
+};
 
 provide('getPostId', getPostId)
 provide('fetchPosts', fetchPosts)
@@ -189,8 +149,18 @@ const state = ref(!false)
   // Следим за изменениями в URL и обновляем состояния
   // Функция для обновления состояния и вызова нужных функций
 
-const updateStateFromRoute = (board, thread) => {
+const checkSubnodeExistence = async (parentNode, subNode) => {
+  const threadExist = dbRef(database, `${parentNode}/${subNode}`); // Проверяем узел с полным путем
+  try {
+    const snapshot = await get(threadExist);
+    return snapshot.exists();
+  } catch (error) {
+    console.error("Ошибка проверки подузла:", error);
+    return false;
+  }
+};
 
+const updateStateFromRoute = async (board, thread) => {
   if (board) {
     boardState.value = board;
     localStorage.setItem('boardState', boardState.value);
@@ -202,6 +172,15 @@ const updateStateFromRoute = (board, thread) => {
   if (thread) {
     threadState.value = thread;
     localStorage.setItem('threadState', threadState.value);
+    
+    // Проверяем наличие threadState.value в узле boardState.value
+    const exists = await checkSubnodeExistence(boardState.value, threadState.value);
+    if (exists) {
+      console.log('OK');
+    } else {
+      startPage(); // Если подузел не существует, перенаправляем на стартовую страницу
+      return; // Останавливаем дальнейшее выполнение
+    }
   } else {
     threadState.value = '';
     localStorage.setItem('threadState', threadState.value);

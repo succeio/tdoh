@@ -238,14 +238,14 @@ const toggleImageSize = () => {
 <template>
   <div
     :id="postId"
-    class="max-w-fit mt-2 bg-zinc-200 dark:text-white p-2 rounded-2xl dark:bg-zinc-900"
+    class="max-w-fit w-full sm:w-auto mt-2 bg-zinc-200 dark:text-white p-2 rounded-2xl dark:bg-zinc-900"
     :class="{
-      'w-2/3': props.text.length > 150,
+      'sm:w-2/3': props.text.length > 150,
       'ml-2': props.id !== 0,
       'border-twitch border-l-2 dark:border-twitch dark:border-l-2': props.id === 0
     }"
   >
-    <div id="postData" class="flex gap-2">
+    <div id="postData" class="flex flex-wrap gap-2 text-sm sm:text-base">
       <p id="post-theme" class="font-sans font-bold">{{ theme }}</p>
       <p
         id="post-name"
@@ -269,15 +269,28 @@ const toggleImageSize = () => {
       <p @click="getPostId(postId)" class="hover:text-twitch cursor-pointer">
         #{{ postId ? postId.slice(12, 20) : postId }}
       </p>
-      <p class="hover:text-twitch cursor-pointer text-green-600">{{ id === 0 ? '0P' : id }}</p>
-      <p v-if="id === 0" @keyup.ctrl.left="openThread(threadId)" @click="openThread(threadId)" class="hover:cursor-pointer">
+      <p class="hover:text-twitch cursor-pointer text-green-600">
+        {{ id === 0 ? '0P' : id }}
+      </p>
+      <p
+        v-if="id === 0"
+        @keyup.ctrl.left="openThread(threadId)"
+        @click="openThread(threadId)"
+        class="hover:cursor-pointer"
+      >
         <img
           src="../assets/right-circle.svg"
           alt="Icon"
           class="h-4 w-4 mr-2 mt-1.5 dark:rounded-2xl dark:bg-twitch"
         />
       </p>
-      <p v-show="root" @click="del(props.threadId, props.postId)"  class="font-bold hover:cursor-pointer" >X</p>
+      <p
+        v-show="root"
+        @click="del(props.threadId, props.postId)"
+        class="font-bold hover:cursor-pointer"
+      >
+        X
+      </p>
       <p
         v-if="props.opcountposts"
         @click="openThread(theme, board)"
@@ -287,36 +300,57 @@ const toggleImageSize = () => {
       </p>
     </div>
 
-    <div class="gap-2 flex">
-      <div class="gap-2 mt-2">
-        
+    <div class="gap-2 flex flex-col sm:flex-row">
+      <div v-show="props.url"  class="gap-2 mt-2">
         <img
           v-if="isImage"
-          :class="['transition-all duration-150 bg-white rounded-2xl cursor-pointer', isEnlarged ? 'max-w-md' : 'max-w-48']"
+          :class="[
+            'transition-all duration-150 bg-white rounded-2xl cursor-pointer',
+            isEnlarged ? 'w-80 sm:max-w-2xl' : 'w-48 sm:max-w-xs'
+          ]"
           :src="url"
           alt="post-pic"
           @click="toggleImageSize"
         />
 
         <video
-          v-if="isVideo && !isTwitch"
-          :class="['transition-all duration-150 bg-white rounded-2xl cursor-pointer', isEnlarged ? 'max-w-lg' : 'max-w-sm']"
+          v-if="isVideo"
+          :class="[
+            'transition-all duration-150 bg-white rounded-2xl cursor-pointer',
+            isEnlarged ? 'w-80 sm:max-w-2xl' : 'w-48 sm:max-w-xs'
+          ]"
           :src="url"
           controls
           @click="toggleImageSize"
         ></video>
 
-        <iframe class="rounded-2xl" v-if="isSoundCloud" 
-        width="100%" height="300" scrolling="no" frameborder="no" allow="autoplay" 
-        :src="`https://w.soundcloud.com/player/?url=https%3A//${scLink[0]}&color=%23ff5500&auto_play=false&hide_related=false&show_comments=true&show_user=true&show_reposts=false&show_teaser=true&visual=true`"></iframe>
-      
-      <iframe class="rounded-2xl" v-if="isYouTube" width="460" height=260 :src="`https://www.youtube.com/embed/${ytLink}`" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
-      
+        <iframe
+          class="rounded-2xl w-full"
+          v-if="isSoundCloud"
+          height="200"
+          scrolling="no"
+          frameborder="no"
+          allow="autoplay"
+          :src="`https://w.soundcloud.com/player/?url=https%3A//${scLink[0]}&color=%23ff5500&auto_play=false&hide_related=false&show_comments=true&show_user=true&show_reposts=false&show_teaser=true&visual=true`"
+        ></iframe>
+
+        <iframe
+          class="rounded-2xl w-full"
+          v-if="isYouTube"
+          width="100%"
+          height="200"
+          :src="`https://www.youtube.com/embed/${ytLink}`"
+          title="YouTube video player"
+          frameborder="0"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+          referrerpolicy="strict-origin-when-cross-origin"
+          allowfullscreen
+        ></iframe>
       </div>
 
-      <!-- whitespace-pre-line; inline; Отображение текста с обработанными ссылками -->
-      <div id="postCore" class="">
-        <p class="ml-2 pt-2 whitespace-normal break-words">
+      <!-- Text with processed links -->
+      <div id="postCore" class="max-w-prose">
+        <p class="ml-2 pt-2 whitespace-normal break-words text-sm sm:text-base">
           <span v-for="(part, index) in splitTextWithLinks" :key="index">
             <span
               v-if="part.isLink"
@@ -335,8 +369,8 @@ const toggleImageSize = () => {
       </div>
     </div>
 
-    <div class="flex gap-2 ml-4 mt-2">
-      <div class="" v-for="reply in props.replies" :key="reply.id">
+    <div class="flex flex-wrap gap-2 ml-4 mt-2">
+      <div v-for="reply in props.replies" :key="reply.id">
         <p
           class="cursor-pointer hover:text-twitch"
           @click="repl(reply)"
@@ -348,13 +382,13 @@ const toggleImageSize = () => {
       </div>
     </div>
 
-    <!-- Tooltip для отображения поста -->
+    <!-- Tooltip for displaying post preview -->
     <div
       v-if="hoverPost"
       :style="{ top: tooltipPosition.top + 'px', left: tooltipPosition.left + 'px' }"
       class="fixed bg-black dark:bg-twitch text-white p-2 rounded-2xl shadow-lg max-w-md"
     >
-      <!-- Верхняя часть тултипа с информацией о посте -->
+      <!-- Upper part of the tooltip with post info -->
       <div class="flex flex-wrap gap-1">
         <p>{{ hoverPost.theme }}</p>
         <p>{{ hoverPost.name }}</p>
@@ -364,7 +398,7 @@ const toggleImageSize = () => {
         <p>#{{ hoverPost.postId.slice(12, 20) }}</p>
       </div>
 
-      <!-- Текст содержимого поста -->
+      <!-- Post content text -->
       <div>
         <p class="pl-4 pt-2 pb-2">{{ hoverPost.text }}</p>
       </div>

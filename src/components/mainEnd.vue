@@ -18,7 +18,8 @@ const scrollToTop = () => {
 <template>
   <div class="overflow-hidden justify-center text-zinc-600 text-xs bg-white dark:bg-black select-none border-t dark:border-zinc-900 pt-4 pb-4">
     
-    <div @click="scrollToTop" class="flex gap-2 justify-center pt-2 pb-2">
+    <!-- Список досок с адаптацией под маленькие экраны -->
+    <div @click="scrollToTop" class="flex flex-wrap gap-2 justify-center pt-2 pb-2 overflow-x-auto">
       <div @click="a('Anime')" class="hover:text-twitch cursor-pointer">Аниме</div>
       <div @click="a('Asylum')" class="hover:text-twitch cursor-pointer">Asylum</div>
       <div @click="a('b')" class="hover:text-twitch cursor-pointer">Бред</div>
@@ -36,15 +37,13 @@ const scrollToTop = () => {
       <div @click="a('tech')" class="hover:text-twitch cursor-pointer">Техника</div>
     </div>
 
-    <div class="pt-1 text-center">
+    <!-- Текстовая информация с центровкой для маленьких экранов -->
+    <div class="pt-1 text-center px-4 sm:px-0">
       <p>Все права и копирайты на этой странице принадлежат правообладателям. 
          За любую размещенную информацию несет личную ответственность постер (лицо, загрузившее эту информацию). 
          Все комментарии принадлежат лицам, отправившим их.</p>
-         <p>Если вы обнаружили информацию, размещённую против правил, пожалуйста, сообщите нам об этом.</p>
-        <p class="pt-2">
-          tdoh. 2024.
-        </p>
+      <p>Если вы обнаружили информацию, размещённую против правил, пожалуйста, сообщите нам об этом.</p>
+      <p class="pt-2">tdoh. 2024.</p>
     </div>
   </div>
-
 </template>
