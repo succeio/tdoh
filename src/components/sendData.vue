@@ -1,7 +1,7 @@
 <script setup>
 import { ref, inject, watch, onMounted } from 'vue'
 import { database } from '../firebase'
-import { ref as dbRef, push, set, get, update } from 'firebase/database'
+import { ref as dbRef, push, set, get, update, remove } from 'firebase/database'
 import ErrorNotification from './ErrorNotification.vue';
 
 const errorMessage = ref('');
@@ -36,6 +36,7 @@ const hashedString = ref('')
 const threadState = ref('')
 const boardState = ref('')
 const replies = ref([])
+const uId = ref('')
 
 const imgSize = ref(0)
 
@@ -66,162 +67,213 @@ const sendPost = async () => {
       ? localStorage.getItem('boardState')
       : localStorage.setItem('boardState', '')
 
-    if (
-      threadState.value &&
-      boardState.value &&
-      boards.some((board) => boardState.value.includes(board))
-    ) {
-      const postId = push(dbRef(database, `${boardState.value}/${threadState.value}`)).key // Генерация уникального ID
+    fetch('https://api.ipify.org?format=json')
+      .then(response => response.json())
+      .then(uId.value = await hashString(postPassword.value))
 
-      replies.value = postText.value.match(/#([A-Za-z0-9_-]+)/g)
 
-      loadImg()
+//-------
 
-      hashedString.value = await hashString(postPassword.value)
-      const newPost = {
-        name: postName.value ? (postName.value.length > 25 ? postName.value.slice(0, 25) : postName.value) : 'Аноним',
-        password: postPassword.value ? hashedString.value : '',
-        theme: postTheme.value.length < 45 ? postTheme.value : postTheme.value.slice(0, 25),
-        text: (/ {4,}/.test(postText.value)) ? postText.value.replace(/ {4,}/g, ' ') : postText.value,
-        url: postUrl.value.length < 100 ? (imgSize.value !== 0 ? (imgSize.value < 4000000 ? postUrl.value : '') : postUrl.value) : '',
-        time: new Date().toLocaleTimeString('ru-RU', {
-          timeZone: 'Europe/Moscow',
-          hour: '2-digit',
-          minute: '2-digit',
-          second: '2-digit'
-        }),
-        data: new Date().toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/\//g, '.'),
-        day: ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'][new Date().getDay()],
-        postId: postId,
-        threadId: threadState.value
+    // Получаем все забаненные объекты
+    const bannedRef = dbRef(database, `banned/${boardState.value}/uIds`);
+    const bannedSnapshot = await get(bannedRef);
+    const isBanned = ref(false)
+    const banExpiration = ref(null)
+
+    if (bannedSnapshot.exists()) {
+      const bannedData = bannedSnapshot.val();
+      const banKey = ref(null)
+
+      // Проходим по всем забаненным объектам
+      for (const key in bannedData) {
+        if (bannedData[key].uId === uId.value) {
+          isBanned.value = true;
+          banExpiration.value = bannedData[key].exp; // Получаем время истечения бана
+          banKey.value = key; // Сохраняем ключ для удаления
+          break; // Выходим из цикла, если нашли uId
+        }
       }
 
-      const savedTime = localStorage.getItem('tmlg')
-        ? localStorage.getItem('tmlg')
-        : localStorage.setItem('tmlg', Date.now() + 6)
-      if (savedTime) {
-        const currentTimeElapsed = Date.now() - savedTime
-        if (currentTimeElapsed >= 5000) {
-          if (postText.value.length < 450 && selectedEmoji.value === generatedEmoji.value) {
-            // Сохраняем новый пост
-            await set(dbRef(database, `${boardState.value}/${threadState.value}/posts/${postId}`), newPost)
-            localStorage.setItem('tmlg', Date.now())
+      // Проверяем, истек ли срок бана
+      if (isBanned.value) {
+        const currentTime = Date.now();
+        if (currentTime < banExpiration.value) {
+          console.log(`uId ${uId.value} забанен до ${new Date(banExpiration.value).toLocaleString()}`);
+        } else {
+          const banKeyRef = dbRef(database, `banned/${boardState.value}/uIds/${banKey.value}`);
+          await remove(banKeyRef); // Удаляем объект по ссылке
+          isBanned.value = false
+        }
+      } else {
+        console.log(`uId ${uId.value} не найден в бане`);
+      }
+    }
 
-            try {
-              // ----------- Обновление lastPostTimestamp в треде ----------- 
-              await update(dbRef(database, `${boardState.value}/${threadState.value}`), {
-                lastPostTimestamp: Date.now() // Обновляем только метку времени последнего поста
-              })
-            } catch (err) {
-              console.error(`Ошибка при обновлении метки последнего поста в треде: `, err)
-            }
+//-------      
 
-            // ----------- код обновления reply ----------- 
-            if (replies.value && replies.value.length) {
-              for (const id of replies.value) {
-                const sId = id.replace('#', '')
-                const postRef = dbRef(database, `${boardState.value}/${threadState.value}/posts/${sId}`)
+    if (isBanned.value === false) {
+      if (
+        threadState.value &&
+        boardState.value &&
+        boards.some((board) => boardState.value.includes(board))
+      ) {
+        const postId = push(dbRef(database, `${boardState.value}/${threadState.value}`)).key // Генерация уникального ID
 
-                try {
-                  const snapshot = await get(postRef)
-                  if (snapshot.exists()) {
-                    const currentReplies = snapshot.val().replies || []
-                    if (!currentReplies.includes(postId)) {
-                      await update(postRef, {
-                        replies: [...currentReplies, postId]
-                      })
-                      console.log(`Пост с id ${sId} успешно обновлен!`)
+        replies.value = postText.value.match(/#([A-Za-z0-9_-]+)/g)
+
+        loadImg()
+
+        hashedString.value = await hashString(postPassword.value)
+        const newPost = {
+          name: postName.value ? (postName.value.length > 25 ? postName.value.slice(0, 25) : postName.value) : 'Аноним',
+          password: postPassword.value ? hashedString.value : '',
+          theme: postTheme.value.length < 45 ? postTheme.value : postTheme.value.slice(0, 25),
+          text: (/\s{4,}/.test(postText.value) ? postText.value.replace(/\s{4,}/g, ' ') : postText.value).replace(/[^A-Za-zА-Яа-я0-9\s]/g, ''),
+          url: postUrl.value.length < 100 ? (imgSize.value !== 0 ? (imgSize.value < 4000000 ? postUrl.value : '') : postUrl.value) : '',
+          time: new Date().toLocaleTimeString('ru-RU', {
+            timeZone: 'Europe/Moscow',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit'
+          }),
+          data: new Date().toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/\//g, '.'),
+          day: ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'][new Date().getDay()],
+          postId: postId,
+          threadId: threadState.value,
+          uId: uId.value
+        }
+
+        const savedTime = localStorage.getItem('tmlg')
+          ? localStorage.getItem('tmlg')
+          : localStorage.setItem('tmlg', Date.now() + 6)
+        if (savedTime) {
+          const currentTimeElapsed = Date.now() - savedTime
+          if (currentTimeElapsed >= 5000) {
+            if (postText.value.length < 450 && selectedEmoji.value === generatedEmoji.value) {
+              // Сохраняем новый пост
+              await set(dbRef(database, `${boardState.value}/${threadState.value}/posts/${postId}`), newPost)
+              localStorage.setItem('tmlg', Date.now())
+
+              try {
+                // ----------- Обновление lastPostTimestamp в треде ----------- 
+                await update(dbRef(database, `${boardState.value}/${threadState.value}`), {
+                  lastPostTimestamp: Date.now() // Обновляем только метку времени последнего поста
+                })
+              } catch (err) {
+                console.error(`Ошибка при обновлении метки последнего поста в треде: `, err)
+              }
+
+              // ----------- код обновления reply ----------- 
+              if (replies.value && replies.value.length) {
+                for (const id of replies.value) {
+                  const sId = id.replace('#', '')
+                  const postRef = dbRef(database, `${boardState.value}/${threadState.value}/posts/${sId}`)
+
+                  try {
+                    const snapshot = await get(postRef)
+                    if (snapshot.exists()) {
+                      const currentReplies = snapshot.val().replies || []
+                      if (!currentReplies.includes(postId)) {
+                        await update(postRef, {
+                          replies: [...currentReplies, postId]
+                        })
+                        console.log(`Пост с id ${sId} успешно обновлен!`)
+                      } else {
+                        console.log(`Пост с id ${sId} уже содержит newPostId.`)
+                      }
                     } else {
-                      console.log(`Пост с id ${sId} уже содержит newPostId.`)
+                      console.log(`Пост с id ${sId} не найден.`)
                     }
-                  } else {
-                    console.log(`Пост с id ${sId} не найден.`)
+                  } catch (err) {
+                    console.error(`Ошибка при обновлении документа с id ${sId}: `, err)
                   }
-                } catch (err) {
-                  console.error(`Ошибка при обновлении документа с id ${sId}: `, err)
                 }
               }
+              // ----------- end -----------
+
+              setTimeout(() => {
+                window.scrollTo({
+                  top: document.body.scrollHeight,
+                  behavior: 'smooth'
+                })
+              }, 100)
+              generateEmojis()
+
+              postText.value = ''
+              postUrl.value = ''
+              postTheme.value = ''
+
+            } else {
+              errorMessage.value = 'Пост слишком длинный либо не решена капча! Максимальная длина 450 символов.'
+              errorTrigger.value++; // Обновляем триггер
             }
-            // ----------- end -----------
+          } else {
+            errorMessage.value = 'Подождите 5 сек.'
+            errorTrigger.value++; // Обновляем триггер          
+          }
+        }
+      } else if (boardState.value && boards.some((board) => boardState.value.includes(board))) {
+        const threadId = push(dbRef(database, 'threads')).key // Генерация уникального ID для нового треда
+        const postId = push(dbRef(database, `${boardState.value}/${threadId}`)).key // Генерация уникального ID для поста
 
-            setTimeout(() => {
-              window.scrollTo({
-                top: document.body.scrollHeight,
-                behavior: 'smooth'
+        hashedString.value = await hashString(postPassword.value)
+        const newPost = {
+          name: postName.value ? (postName.value.length > 25 ? postName.value.slice(0, 25) : postName.value) : 'Аноним',
+          password: postPassword.value ? hashedString.value : '',
+          theme: postTheme.value.length < 45 ? postTheme.value : postTheme.value.slice(0, 25),
+          text: (/\s{4,}/.test(postText.value) ? postText.value.replace(/\s{4,}/g, ' ') : postText.value).replace(/[^A-Za-zА-Яа-я0-9\s]/g, ''),
+          url: postUrl.value.length < 100 ? postUrl.value : '',
+          time: new Date().toLocaleTimeString('ru-RU', {
+            timeZone: 'Europe/Moscow',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit'
+          }),
+          data: new Date().toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/\//g, '.'),
+          day: ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'][new Date().getDay()],
+          postId: postId,
+          threadId: threadId,
+          uId: uId.value
+        }
+
+        const savedTime = localStorage.getItem('tmlg')
+          ? localStorage.getItem('tmlg')
+          : localStorage.setItem('tmlg', Date.now() + 6)
+        if (savedTime) {
+          const currentTimeElapsed = Date.now() - savedTime
+          if (currentTimeElapsed >= 25000) {
+            if (postText.value.length < 450 && /\.(jpeg|jpg|gif|png|mp4|webm|ogg)$/i.test(postUrl.value) && selectedEmoji.value === generatedEmoji.value) {
+              await set(dbRef(database, `${boardState.value}/${threadId}/posts/${postId}`), newPost)
+
+              // ----------- Установка lastPostTimestamp и 0p для нового треда ----------- 
+              await update(dbRef(database, `${boardState.value}/${threadId}`), {
+                lastPostTimestamp: Date.now(), // Обновляем только метку времени последнего поста
+                op: newPost
               })
-            }, 100)
-            generateEmojis()
 
-            postText.value = ''
-            postUrl.value = ''
-            postTheme.value = ''
 
+              localStorage.setItem('threadState', threadId)
+              threadState.value = threadId
+
+              generateEmojis()
+              postText.value = ''
+              postUrl.value = ''
+              postTheme.value = ''
+
+              fetchPosts()
+            } else {
+              errorMessage.value = 'Пост слишком длинный или не выбран файл! Максимальная длина 450 символов.';
+              errorTrigger.value++; // Обновляем триггер
+            }
           } else {
-            errorMessage.value = 'Пост слишком длинный либо не решена капча! Максимальная длина 450 символов.'
+            errorMessage.value = 'Подождите 25 сек.';
             errorTrigger.value++; // Обновляем триггер
           }
-        } else {
-          errorMessage.value = 'Подождите 5 сек.'
-          errorTrigger.value++; // Обновляем триггер          
         }
       }
-    } else if (boardState.value && boards.some((board) => boardState.value.includes(board))) {
-      const threadId = push(dbRef(database, 'threads')).key // Генерация уникального ID для нового треда
-      const postId = push(dbRef(database, `${boardState.value}/${threadId}`)).key // Генерация уникального ID для поста
-
-      hashedString.value = await hashString(postPassword.value)
-      const newPost = {
-        name: postName.value ? (postName.value.length > 25 ? postName.value.slice(0, 25) : postName.value) : 'Аноним',
-        password: postPassword.value ? hashedString.value : '',
-        theme: postTheme.value.length < 45 ? postTheme.value : postTheme.value.slice(0, 25),
-        text: (/ {4,}/.test(postText.value)) ? postText.value.replace(/ {4,}/g, ' ') : postText.value,
-        url: postUrl.value.length < 100 ? postUrl.value : '',
-        time: new Date().toLocaleTimeString('ru-RU', {
-          timeZone: 'Europe/Moscow',
-          hour: '2-digit',
-          minute: '2-digit',
-          second: '2-digit'
-        }),
-        data: new Date().toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/\//g, '.'),
-        day: ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'][new Date().getDay()],
-        postId: postId,
-        threadId: threadId
-      }
-
-      const savedTime = localStorage.getItem('tmlg')
-        ? localStorage.getItem('tmlg')
-        : localStorage.setItem('tmlg', Date.now() + 6)
-      if (savedTime) {
-        const currentTimeElapsed = Date.now() - savedTime
-        if (currentTimeElapsed >= 25000) {
-          if (postText.value.length < 450 && /\.(jpeg|jpg|gif|png|mp4|webm|ogg)$/i.test(postUrl.value) && selectedEmoji.value === generatedEmoji.value) {
-            await set(dbRef(database, `${boardState.value}/${threadId}/posts/${postId}`), newPost)
-
-            // ----------- Установка lastPostTimestamp и 0p для нового треда ----------- 
-            await update(dbRef(database, `${boardState.value}/${threadId}`), {
-              lastPostTimestamp: Date.now(), // Обновляем только метку времени последнего поста
-              op: newPost
-            })
-
-
-            localStorage.setItem('threadState', threadId)
-            threadState.value = threadId
-
-            generateEmojis()
-            postText.value = ''
-            postUrl.value = ''
-            postTheme.value = ''
-
-            fetchPosts()
-          } else {
-            errorMessage.value = 'Пост слишком длинный или не выбран файл! Максимальная длина 450 символов.';
-            errorTrigger.value++; // Обновляем триггер
-          }
-        } else {
-          errorMessage.value = 'Подождите 25 сек.';
-          errorTrigger.value++; // Обновляем триггер
-        }
-      }
+    } else {
+      errorMessage.value = `Забанен до ${new Date(banExpiration.value).toLocaleString()}`
+      errorTrigger.value++; // Обновляем триггер
     }
   } catch (error) {
     console.error(error)

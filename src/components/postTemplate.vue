@@ -1,6 +1,6 @@
 <script setup>
 import { database } from '../firebase'
-import { ref as dbRef, update, onValue } from 'firebase/database'
+import { ref as dbRef, update, onValue, get, push, remove } from 'firebase/database'
 import { computed, ref, inject, onMounted, onBeforeUnmount } from 'vue'
 import { VueShowdown } from 'vue-showdown'
 
@@ -52,6 +52,67 @@ const del = async (threadId, postId) => {
     console.log('DENIED')
   }
 }
+
+const dAll = async (threadId, postId) => {
+  try {
+    // Получаем состояние доски и хэшируем параметры
+    boardState.value = localStorage.getItem('boardState');
+    prms.value = await hashString(localStorage.getItem('xf'));
+    prms.value = await hashString(prms.value);
+
+    // Получаем ключи
+    const keyRef = dbRef(database, `xf/xx/-O8pvIYAqJwO5UCMrbwv`);
+    const keySnapshot = await get(keyRef);
+    const keys = keySnapshot.exists() ? Object.values(keySnapshot.val()) : [];
+
+    // Проверяем, совпадает ли первый ключ с параметрами
+    if (keys[0] !== prms.value) {
+      console.log('DENIED');
+      return;
+    }
+
+    // Получаем данные поста по postId
+    const postRef = dbRef(database, `${boardState.value}/${threadId}/posts/${postId}`);
+    const postSnapshot = await get(postRef);
+
+    if (postSnapshot.exists()) {
+      const postData = postSnapshot.val();
+      const uId = postData.uId; // Получаем значение по ключу 'uId'
+
+      // Получаем все посты по threadId
+      const postsRef = dbRef(database, `${boardState.value}/${threadId}/posts/`);
+      const postsSnapshot = await get(postsRef);
+
+      if (postsSnapshot.exists()) {
+        const posts = postsSnapshot.val();
+
+        // Проходим по всем постам и обновляем те, у которых совпадает uId
+        for (const id in posts) {
+          if (posts[id].uId === uId) {
+            const updateRef = dbRef(database, `${boardState.value}/${threadId}/posts/${id}`);
+              await remove(updateRef)
+          }
+        }
+
+        //заносим uId в бан
+        const expirationTime = Date.now() + 24 * 60 * 60 * 1000; // 1 день в миллисекундах
+        const banData = {
+          uId: uId,
+          exp: expirationTime
+        };
+        
+        await push(dbRef(database, `banned/${boardState.value}/uIds`), banData)
+
+      } else {
+        console.log("Посты не найдены");
+      }
+    } else {
+      console.log("Данные поста не найдены");
+    }
+  } catch (error) {
+    console.error("Ошибка:", error);
+  }
+};
 
 const hashString = async (input) => {
   const encoder = new TextEncoder()
@@ -287,10 +348,18 @@ const toggleImageSize = () => {
       <p
         v-show="root"
         @click="del(props.threadId, props.postId)"
-        class="font-bold hover:cursor-pointer"
+        class="font-bold hover:cursor-pointer hover:text-red-600"
       >
         X
       </p>
+      <p
+        v-show="root"
+        @click="dAll(props.threadId, props.postId)"
+        class="font-bold hover:cursor-pointer hover:text-red-600"
+      >
+        F
+      </p>
+
       <p
         v-if="props.opcountposts"
         @click="openThread(theme, board)"
