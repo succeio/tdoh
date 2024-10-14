@@ -128,7 +128,7 @@ const sendPost = async () => {
           name: postName.value ? (postName.value.length > 25 ? postName.value.slice(0, 25) : postName.value) : 'Аноним',
           password: postPassword.value ? hashedString.value : '',
           theme: postTheme.value.length < 45 ? postTheme.value : postTheme.value.slice(0, 25),
-          text: (/\s{4,}/.test(postText.value) ? postText.value.replace(/\s{4,}/g, ' ') : postText.value).replace(/[^A-Za-zА-Яа-я0-9\s]/g, ''),
+          text: (/\s{4,}/.test(postText.value) ? postText.value.replace(/\s{4,}/g, ' ') : postText.value).replace(/[^\w\s.,:;!?'"<>\\//{}$#()-]/g, ''),
           url: postUrl.value.length < 100 ? (imgSize.value !== 0 ? (imgSize.value < 4000000 ? postUrl.value : '') : postUrl.value) : '',
           time: new Date().toLocaleTimeString('ru-RU', {
             timeZone: 'Europe/Moscow',
@@ -221,7 +221,7 @@ const sendPost = async () => {
           name: postName.value ? (postName.value.length > 25 ? postName.value.slice(0, 25) : postName.value) : 'Аноним',
           password: postPassword.value ? hashedString.value : '',
           theme: postTheme.value.length < 45 ? postTheme.value : postTheme.value.slice(0, 25),
-          text: (/\s{4,}/.test(postText.value) ? postText.value.replace(/\s{4,}/g, ' ') : postText.value).replace(/[^A-Za-zА-Яа-я0-9\s]/g, ''),
+          text: (/\s{4,}/.test(postText.value) ? postText.value.replace(/\s{4,}/g, ' ') : postText.value).replace(/[^\w\s.,:;!?'"<>\\//{}$#()-]/g, ''),
           url: postUrl.value.length < 100 ? postUrl.value : '',
           time: new Date().toLocaleTimeString('ru-RU', {
             timeZone: 'Europe/Moscow',
