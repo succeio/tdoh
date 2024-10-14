@@ -8,9 +8,6 @@ const fetchPosts = inject('fetchPosts')
 const getPostId = inject('getPostId')
 
 const boardState = ref('')
-const prms = ref('')
-const keys = ref([])
-const root = localStorage.getItem('xf')
 
 const props = defineProps({
   id: Number,
@@ -27,6 +24,9 @@ const props = defineProps({
   replies: Array
 })
 
+const prms = ref('')
+const keys = ref([])
+const root = localStorage.getItem('xf')
 
 const del = async (threadId, postId) => {
   boardState.value = localStorage.getItem('boardState')

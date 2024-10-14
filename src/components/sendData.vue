@@ -67,13 +67,14 @@ const sendPost = async () => {
       ? localStorage.getItem('boardState')
       : localStorage.setItem('boardState', '')
 
-    fetch('https://api.ipify.org?format=json')
-      .then(response => response.json())
-      .then(uId.value = await hashString(postPassword.value))
-
+    const response = await fetch('https://api.ipify.org?format=json')
+    const data = await response.json()
+    const ipAddress = data.ip; // Получаем только IP-адрес
+    uId.value = await hashString(ipAddress); // Хешируем только IP-адрес
+    console.log(data, uId.value)
 
 //-------
-
+    console.log()
     // Получаем все забаненные объекты
     const bannedRef = dbRef(database, `banned/${boardState.value}/uIds`);
     const bannedSnapshot = await get(bannedRef);
