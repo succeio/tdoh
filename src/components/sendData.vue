@@ -104,8 +104,6 @@ const sendPost = async () => {
           await remove(banKeyRef); // Удаляем объект по ссылке
           isBanned.value = false
         }
-      } else {
-        console.log(`uId ${uId.value} не найден в бане`);
       }
     }
 
@@ -329,22 +327,29 @@ watch(
 );
 
 //-----captcha
-const emojis = ref(['😀', '😂', '😍', '😎', '😢', '🥳', '🤔', '😱', '😴'])
+const emojisPool = ref(['😀', '😂', '😍', '😎', '😢', '🥳', '🤔', '😱', '😴'])
 const generatedEmoji = ref(null)
 const selectedEmoji = ref(null)
 const resultMessage = ref('')
+const emojis = ref([]) // Отдельно храним набор для показа
 
 const generateEmojis = () => {
+  // Используем исходный набор эмодзи для генерации
+  const fullEmojis = [...emojisPool.value]
+
   // Генерируем случайный эмодзи
-  generatedEmoji.value = emojis.value[Math.floor(Math.random() * emojis.value.length)]
+  generatedEmoji.value = fullEmojis[Math.floor(Math.random() * fullEmojis.length)]
 
   // Генерируем три случайных эмодзи, включая сгенерированный
   const randomEmojis = new Set()
   randomEmojis.add(generatedEmoji.value)
   while (randomEmojis.size < 3) {
-    randomEmojis.add(emojis.value[Math.floor(Math.random() * emojis.value.length)])
+    randomEmojis.add(fullEmojis[Math.floor(Math.random() * fullEmojis.length)])
   }
-  emojis.value = Array.from(randomEmojis)
+
+  // Перемешиваем эмодзи
+  emojis.value = Array.from(randomEmojis).sort(() => Math.random() - 0.5)
+  
   selectedEmoji.value = null
   resultMessage.value = ''
 }
