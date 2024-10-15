@@ -71,7 +71,6 @@ const sendPost = async () => {
     const data = await response.json()
     const ipAddress = data.ip; // Получаем только IP-адрес
     uId.value = await hashString(ipAddress); // Хешируем только IP-адрес
-    console.log(data, uId.value)
 
 //-------
     console.log()

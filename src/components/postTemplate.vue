@@ -1,7 +1,7 @@
 <script setup>
 import { database } from '../firebase'
 import { ref as dbRef, update, onValue, get, push, remove } from 'firebase/database'
-import { computed, ref, inject, onMounted, onBeforeUnmount } from 'vue'
+import { computed, ref, inject, onMounted, onBeforeUnmount, watchEffect } from 'vue'
 import { VueShowdown } from 'vue-showdown'
 
 const fetchPosts = inject('fetchPosts')
@@ -278,21 +278,38 @@ const hidePostPreview = () => {
 const updateTooltipPosition = (event) => {
   tooltipPosition.value = { top: event.clientY + 10, left: event.clientX + 10 }
 }
-onBeforeUnmount
-// Обновляем позицию тултипа при движении мыши
-onMounted(() => {
-  window.addEventListener('mousemove', updateTooltipPosition)
-})
 
+
+// При монтировании проверяем и добавляем обработчики
+onMounted(() => {
+  checkScreenSize();
+  window.addEventListener('resize', checkScreenSize);
+  window.addEventListener('mousemove', updateTooltipPosition);
+});
+
+// При уничтожении компонента удаляем обработчики
 onBeforeUnmount(() => {
-  window.removeEventListener('mousemove', updateTooltipPosition)
-})
+  window.removeEventListener('resize', checkScreenSize);
+  window.removeEventListener('mousemove', updateTooltipPosition);
+});
 
 const isEnlarged = ref(false); // Using the Composition API
 
 const toggleImageSize = () => {
   isEnlarged.value = !isEnlarged.value; // Toggle the state
 };
+
+const isMobile = ref(false); // Флаг для мобильных устройств
+
+// Проверка ширины экрана для мобильных устройств
+const checkScreenSize = () => {
+  isMobile.value = window.innerWidth <= 640; // Мобильное устройство если <= 640px
+};
+
+// Автоматическое обновление состояния экрана
+watchEffect(() => {
+  checkScreenSize();
+});
 
 </script>
 
@@ -306,7 +323,7 @@ const toggleImageSize = () => {
       'border-twitch border-l-2 dark:border-twitch dark:border-l-2': props.id === 0
     }"
   >
-    <div id="postData" class="flex flex-wrap gap-2 text-sm sm:text-base">
+    <div id="postData" class="flex flex-wrap gap-1 text-sm sm:text-base">
       <p id="post-theme" class="font-sans font-bold">{{ theme }}</p>
       <p
         id="post-name"
@@ -331,7 +348,7 @@ const toggleImageSize = () => {
         #{{ postId ? postId.slice(12, 20) : postId }}
       </p>
       <p class="hover:text-twitch cursor-pointer text-green-600">
-        {{ id === 0 ? '0P' : id }}
+        {{ id === 0 ? '' : id }}
       </p>
       <p
         v-if="id === 0"
@@ -342,7 +359,7 @@ const toggleImageSize = () => {
         <img
           src="../assets/right-circle.svg"
           alt="Icon"
-          class="h-4 w-4 mr-2 mt-1.5 dark:rounded-2xl dark:bg-twitch"
+          class="h-5 w-5 dark:rounded-2xl dark:bg-twitch"
         />
       </p>
       <p
@@ -451,26 +468,26 @@ const toggleImageSize = () => {
       </div>
     </div>
 
-    <!-- Tooltip for displaying post preview -->
-    <div
-      v-if="hoverPost"
-      :style="{ top: tooltipPosition.top + 'px', left: tooltipPosition.left + 'px' }"
-      class="fixed bg-black dark:bg-twitch text-white p-2 rounded-2xl shadow-lg max-w-md"
-    >
-      <!-- Upper part of the tooltip with post info -->
-      <div class="flex flex-wrap gap-1">
-        <p>{{ hoverPost.theme }}</p>
-        <p>{{ hoverPost.name }}</p>
-        <p>{{ hoverPost.passcode }}</p>
-        <p>{{ hoverPost.time }}</p>
-        <p>{{ hoverPost.data }}</p>
-        <p>#{{ hoverPost.postId.slice(12, 20) }}</p>
-      </div>
-
-      <!-- Post content text -->
-      <div>
-        <p class="pl-4 pt-2 pb-2">{{ hoverPost.text }}</p>
-      </div>
+  <!-- Tooltip показывается только если есть hoverPost и это не мобильное устройство -->
+  <div
+    v-if="hoverPost && !isMobile"
+    :style="{ top: tooltipPosition.top + 'px', left: tooltipPosition.left + 'px' }"
+    class="fixed bg-black dark:bg-twitch text-white p-2 rounded-2xl shadow-lg max-w-md"
+  >
+    <!-- Верхняя часть всплывающего окна с информацией о посте -->
+    <div class="flex flex-wrap gap-1">
+      <p>{{ hoverPost.theme }}</p>
+      <p>{{ hoverPost.name }}</p>
+      <p>{{ hoverPost.passcode }}</p>
+      <p>{{ hoverPost.time }}</p>
+      <p>{{ hoverPost.data }}</p>
+      <p>#{{ hoverPost.postId.slice(12, 20) }}</p>
     </div>
+
+    <!-- Текст поста -->
+    <div>
+      <p class="pl-4 pt-2 pb-2">{{ hoverPost.text }}</p>
+    </div>
+  </div>
   </div>
 </template>
