@@ -1,5 +1,5 @@
 <script setup>
-import { ref, provide, watch, onMounted, onUnmounted } from 'vue'
+import { ref, provide, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router';
 import { database } from './firebase'
 import { ref as dbRef, onValue, query, get, orderByChild, limitToLast } from 'firebase/database'
@@ -15,8 +15,6 @@ import NullPage from './components/nullPage.vue';
 
 const posts = ref([])
 const threads = ref([])
-const threadState = ref('')
-const boardState = ref('')
 const postId = ref('')
 
 const themeState = ref('')
@@ -29,58 +27,63 @@ const router = useRouter();
 const startPage = () => {
   posts.value = []
   threads.value = []
-  threadState.value = ''
-  boardState.value = ''
   themeState.value = ''
-  localStorage.setItem('boardState', '')
-  localStorage.setItem('threadState', '')
   router.push({ path: `/` })
-  document.title = `🍤 shrmpch`
-
 }
+
+let unsubscribe = null; // Хранение ссылки на предыдущий слушатель
 
 // Функция для полной загрузки данных onValue
-const fetchPosts = () => {
-  threadState.value = localStorage.getItem('threadState') ? localStorage.getItem('threadState') : ''
-  boardState.value = localStorage.getItem('boardState')
-    ? localStorage.getItem('boardState')
-    : '-O8H6aNDuf1NlK9k2Gz6'
+const fetchPosts = async () => {
+  if (unsubscribe) {
+    unsubscribe(); // Отписываемся от предыдущего слушателя
+  }
 
-  router.push({ path: `/${boardState.value}/${threadState.value}` })
+  posts.value = [];
+  threads.value = []; // Очищаем треды, если это необходимо
+  await nextTick();
+  
+  const postsRef = dbRef(database, `${route.params.board}/${route.params.thread}/posts`);
 
-  const postsRef = dbRef(database, `${boardState.value}/${threadState.value}/posts`)
+  // Используем onValue для подписки на изменения
+  unsubscribe = onValue(postsRef, (snapshot) => { // Используем глобальную переменную unsubscribe
+    const data = snapshot.val();
 
-  onValue(postsRef, (snapshot) => {
-    const data = snapshot.val()
-    
     if (data) {
       // Если есть данные, извлекаем посты
-      posts.value = Object.values(data) // Преобразуем объект постов в массив
-      localStorage.setItem('theme', posts.value[0].theme)
-      themeState.value = posts.value[0].theme //localStorage.getItem('theme')
-      threads.value = []
+      posts.value = Object.values(data); // Преобразуем объект постов в массив
+
+      // Проверяем, есть ли хотя бы один пост
+      if (posts.value.length > 0) {
+        localStorage.setItem('theme', posts.value[0].theme);
+        themeState.value = posts.value[0].theme; // Устанавливаем тему
+      } else {
+        // Если постов нет, очищаем тему
+        localStorage.removeItem('theme');
+        themeState.value = '';
+      }
+
     } else {
-      posts.value = []
+      posts.value = []; // Если данных нет, устанавливаем пустой массив
+      localStorage.removeItem('theme'); // Удаляем тему, если данных нет
+      themeState.value = ''; // Очищаем тему
     }
-  })
-}
+  });
+};
 
 const fetchThreads = async () => {
+  if (unsubscribe) {
+    unsubscribe(); // Отписываемся от предыдущего слушателя
+  }
+
   themeState.value = ''
-  threadState.value = localStorage.getItem('threadState')
+posts.value = []
   threads.value = []
-  boardState.value = localStorage.getItem('boardState')
-//  const boardState = ref(localStorage.getItem('boardState'))
-
-  // Переход на нужный роут
-  router.push({ path: `/${boardState.value}/${threadState.value}` })
-
-  document.title = `🍤 ${boardState.value}`
 
   try {
     // Запрос тредов с сортировкой по lastPostTimestamp и ограничением на 20 последних тредов
     const sectionRef = query(
-      dbRef(database, boardState.value),
+      dbRef(database, route.params.board),
       orderByChild('lastPostTimestamp'),
       limitToLast(10)
     )
@@ -116,7 +119,7 @@ const fetchThreads = async () => {
     console.error('Ошибка при загрузке тредов:', error)
   }
 
-  return threads.value // Возвращаем массив тредов
+  //return threads.value // Возвращаем массив тредов
 }
 
 const getPostId = (id) => {
@@ -129,7 +132,7 @@ const getPostId = (id) => {
     postId.value = id;
   }
 
-  if (threadState.value) {
+  if (route.params.thread) {
     window.scrollTo({
       top: document.body.scrollHeight,
       behavior: 'smooth'
@@ -149,6 +152,14 @@ const state = ref(!false)
   // Следим за изменениями в URL и обновляем состояния
   // Функция для обновления состояния и вызова нужных функций
 
+watch(() => route.params, async (newParams) => {
+  await nextTick(); // Ждем обновления
+  const { board, thread } = newParams;
+  updateStateFromRoute(board, thread);
+  document.title = board ? `🍤 ${board} ${themeState.value}` : `🍤 shrmpch`
+});
+
+
 const checkSubnodeExistence = async (parentNode, subNode) => {
   const threadExist = dbRef(database, `${parentNode}/${subNode}`); // Проверяем узел с полным путем
   try {
@@ -161,41 +172,23 @@ const checkSubnodeExistence = async (parentNode, subNode) => {
 };
 
 const updateStateFromRoute = async (board, thread) => {
-  if (board) {
-    boardState.value = board;
-    localStorage.setItem('boardState', boardState.value);
-  } else {
-    boardState.value = '';
-    localStorage.setItem('boardState', boardState.value);
-  }
-
-  if (thread) {
-    threadState.value = thread;
-    localStorage.setItem('threadState', threadState.value);
-    
-    // Проверяем наличие threadState.value в узле boardState.value
-    const exists = await checkSubnodeExistence(boardState.value, threadState.value);
+  await nextTick()
+  if (!board && !thread) {
+    startPage()
+  } else if (board && !thread) {
+    fetchThreads()
+  } else if (board && thread) {
+    const exists = await checkSubnodeExistence(board, thread);
     if (exists) {
       console.log('OK');
     } else {
       startPage(); // Если подузел не существует, перенаправляем на стартовую страницу
       return; // Останавливаем дальнейшее выполнение
     }
-  } else {
-    threadState.value = '';
-    localStorage.setItem('threadState', threadState.value);
-  }
-
-  if (threadState.value && boardState.value) {
-    fetchPosts();  // Если указан threadState, загружаем посты
-  } else if (boardState.value) {
-    fetchThreads();  // Иначе загружаем темы
+    fetchPosts()
   }
 };
 
-
-watch(() => route.fullPath, () => {updateStateFromRoute(route.params.board, route.params.thread)})
-watch(themeState, () => {document.title = `🍤 ${boardState.value} ${themeState.value}`;});
 
 const newPostCount = ref(0) // Счетчик новых постов
 
@@ -216,7 +209,7 @@ watch(posts, (newPosts, oldPosts) => {
 const handleVisibilityChange = () => {
   if (!document.hidden) {
     newPostCount.value = 0 // Сбрасываем счетчик новых постов
-    document.title = boardState.value ? `🍤 ${boardState.value} ${themeState.value}` : `🍤 shrmpch`  // Сбрасываем заголовок
+    document.title = `🍤 ${route.params.board}`   // Сбрасываем заголовок
   }
 }
 
@@ -235,11 +228,11 @@ onUnmounted(() => {
 <template>
   <MiniHeader />
   <div class="min-h-screen dark:bg-twitch bg-black">
-    <LineHeader :themeState="themeState" :boardState="boardState" />
+    <LineHeader :themeState="themeState" />
     <div class="min-h-screen bg-white dark:bg-black rounded-t-2xl">
       <div class="pt-4">
         <button
-          v-if="!threadState && boardState"
+          v-if="!route.params.thread && route.params.board"
           @click="
             () => {
               state = !state
@@ -252,13 +245,13 @@ onUnmounted(() => {
       </div>
 
       <div class="max-w-4xl">
-        <SendData v-if="!state && !threadState && boardState" :reply-id="postId" />
+        <SendData v-if="!state && !route.params.thread && route.params.board" :reply-id="postId" />
       </div>
 
-      <NullPage v-if="!boardState" />
+      <NullPage v-if="!route.params.board" />
 
       <div class="ml-4">
-        <PostListTemplate v-if="threadState" :posts="posts" />
+        <PostListTemplate v-if="route.params.thread" :posts="posts" />
 
         <div v-auto-animate >
 <div v-if="threads.length">
@@ -309,7 +302,7 @@ onUnmounted(() => {
 
         </div>
 
-        <SendData class="max-w-4xl" v-if="threadState" :reply-id="postId" />
+        <SendData class="max-w-4xl" v-if="route.params.thread && posts.length > 0" :reply-id="postId" />
       </div>
     </div>
     

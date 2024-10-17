@@ -1,13 +1,16 @@
 <script setup>
 import { database } from '../firebase'
 import { ref as dbRef, update, onValue, get, push, remove } from 'firebase/database'
-import { computed, ref, inject, onMounted, onBeforeUnmount, watchEffect } from 'vue'
+import { computed, ref, inject, onMounted, onBeforeUnmount, watchEffect} from 'vue'
+import { useRoute } from 'vue-router';
 import { VueShowdown } from 'vue-showdown'
 
-const fetchPosts = inject('fetchPosts')
+//const fetchPosts = inject('fetchPosts')
 const getPostId = inject('getPostId')
 
-const boardState = ref('')
+//---------- router
+const route = useRoute();
+//----------- router
 
 const props = defineProps({
   id: Number,
@@ -24,12 +27,48 @@ const props = defineProps({
   replies: Array
 })
 
+//  route.params.board, route.params.thread
 const prms = ref('')
 const keys = ref([])
 const root = localStorage.getItem('xf')
 
+const pin = async (threadId) => {
+  prms.value = await hashString(localStorage.getItem('xf'))
+  prms.value = await hashString(prms.value)
+
+  const keyRef = dbRef(database, `xf/xx/-O8pvIYAqJwO5UCMrbwv`)
+
+   onValue(keyRef, (snapshot) => {
+    const data = snapshot.val()
+    keys.value = Object.values(data)
+   }) 
+  
+  if (keys.value[0] == prms.value) {
+    const postRef = dbRef(database, `${route.params.board}/${threadId}/op`)
+    const snapshot = await get(dbRef(database, `${route.params.board}/${threadId}`))
+    if (snapshot.exists()) {
+      const data = snapshot.val()
+      if (data.lastPostTimestamp !== 9999999999999) {
+        console.log(data.lastPostTimestamp)
+        await update(dbRef(database, `${route.params.board}/${threadId}`), {
+          lastPostTimestamp: 9999999999999 
+        })
+        await update(postRef, {
+          time: "PINNED"
+        })        
+      } else {
+        await update(dbRef(database, `${route.params.board}/${threadId}`), {
+          lastPostTimestamp: Date.now()
+        })
+          await update(postRef, {
+          time: "00:00:00"
+        })        
+      }
+    }
+  }
+}
+
 const del = async (threadId, postId) => {
-  boardState.value = localStorage.getItem('boardState')
   prms.value = await hashString(localStorage.getItem('xf'))
   prms.value = await hashString(prms.value)
 
@@ -41,7 +80,7 @@ const del = async (threadId, postId) => {
    }) 
 
   if (keys.value[0] == prms.value){
-    const postRef = dbRef(database, `${boardState.value}/${threadId}/posts/${postId}`)
+    const postRef = dbRef(database, `${route.params.board}/${threadId}/posts/${postId}`)
     update(postRef, { text: '*Пост был изъят.*'})
     update(postRef, { url: ''})
     update(postRef, { theme: ''})
@@ -56,7 +95,6 @@ const del = async (threadId, postId) => {
 const dAll = async (threadId, postId) => {
   try {
     // Получаем состояние доски и хэшируем параметры
-    boardState.value = localStorage.getItem('boardState');
     prms.value = await hashString(localStorage.getItem('xf'));
     prms.value = await hashString(prms.value);
 
@@ -72,7 +110,7 @@ const dAll = async (threadId, postId) => {
     }
 
     // Получаем данные поста по postId
-    const postRef = dbRef(database, `${boardState.value}/${threadId}/posts/${postId}`);
+    const postRef = dbRef(database, `${route.params.board}/${threadId}/posts/${postId}`);
     const postSnapshot = await get(postRef);
 
     if (postSnapshot.exists()) {
@@ -80,7 +118,7 @@ const dAll = async (threadId, postId) => {
       const uId = postData.uId; // Получаем значение по ключу 'uId'
 
       // Получаем все посты по threadId
-      const postsRef = dbRef(database, `${boardState.value}/${threadId}/posts/`);
+      const postsRef = dbRef(database, `${route.params.board}/${threadId}/posts/`);
       const postsSnapshot = await get(postsRef);
 
       if (postsSnapshot.exists()) {
@@ -89,7 +127,7 @@ const dAll = async (threadId, postId) => {
         // Проходим по всем постам и обновляем те, у которых совпадает uId
         for (const id in posts) {
           if (posts[id].uId === uId) {
-            const updateRef = dbRef(database, `${boardState.value}/${threadId}/posts/${id}`);
+            const updateRef = dbRef(database, `${route.params.board}/${threadId}/posts/${id}`);
               await remove(updateRef)
           }
         }
@@ -101,7 +139,7 @@ const dAll = async (threadId, postId) => {
           exp: expirationTime
         };
         
-        await push(dbRef(database, `banned/${boardState.value}/uIds`), banData)
+        await push(dbRef(database, `banned/${route.params.board}/uIds`), banData)
 
       } else {
         console.log("Посты не найдены");
@@ -123,10 +161,12 @@ const hashString = async (input) => {
   return hashHex.substring(8, 16)
 }
 
-const openThread = (thread) => {
-  localStorage.setItem('threadState', thread)
-  fetchPosts()
-}
+// const openThread = async (thread) => {
+//   //localStorage.setItem('threadState', thread)
+// //  await router.push({ path: `/${thread}` })
+//   await nextTick(); // Ждем обновления
+// //  fetchPosts() - не нужно, потому что отслеживается изменение
+// }
 
 // Проверка, является ли ссылка изображением
 const isImage = computed(() => {
@@ -316,7 +356,7 @@ watchEffect(() => {
 <template>
   <div
     :id="postId"
-    class="max-w-fit w-full sm:w-auto mt-2 bg-zinc-200 dark:text-white p-2 rounded-2xl dark:bg-zinc-900"
+    class=" max-w-fit w-full sm:w-auto mt-2 bg-zinc-200 dark:text-zinc-200 p-2 rounded-2xl dark:bg-zinc-900" 
     :class="{
       'sm:w-2/3': props.text.length > 150,
       'ml-2': props.id !== 0,
@@ -341,7 +381,7 @@ watchEffect(() => {
       >
         {{ displayValue }}
       </p>
-      <p id="post-time">{{ time }}</p>
+      <p id="post-time">{{ time === 'PINNED' ? '00:00:00' : time }}</p>
       <p v-if="props.day">{{ day }}</p>
       <p id="post-date">{{ data }}</p>
       <p @click="getPostId(postId)" class="hover:text-twitch cursor-pointer">
@@ -350,17 +390,31 @@ watchEffect(() => {
       <p class="hover:text-twitch cursor-pointer text-green-600">
         {{ id === 0 ? '' : id }}
       </p>
+
       <p
-        v-if="id === 0"
-        @keyup.ctrl.left="openThread(threadId)"
-        @click="openThread(threadId)"
+        v-if="time === 'PINNED'"
+        class=""
+      >
+        <img
+          src="../assets/pin.svg"
+          alt="Icon"
+          class="h-5 w-5 dark:rounded-2xl dark:bg-twitch select-none"
+        />
+      </p>
+
+      <p
+        v-if="id === 0 && !route.params.thread"
+        
+        
         class="hover:cursor-pointer"
       >
+      <router-link :to="`/${route.params.board}/${props.threadId}`">
         <img
           src="../assets/right-circle.svg"
           alt="Icon"
           class="h-5 w-5 dark:rounded-2xl dark:bg-twitch"
         />
+      </router-link>
       </p>
       <p
         v-show="root"
@@ -376,18 +430,18 @@ watchEffect(() => {
       >
         F
       </p>
-
       <p
-        v-if="props.opcountposts"
-        @click="openThread(theme, board)"
-        class="hover:text-twitch cursor-pointer"
+        v-show="root"
+        v-if="id === 0"
+        @click="pin(props.threadId)"
+        class="font-bold hover:cursor-pointer hover:text-red-600"
       >
-        posts: {{ opcountposts }}
-      </p>
+        P
+      </p>      
     </div>
 
     <div class="gap-2 flex flex-col sm:flex-row">
-      <div v-show="props.url"  class="gap-2 mt-2">
+      <div v-show="props.url"  class="gap-2 mt-2 relative">
         <img
           v-if="isImage"
           :class="[
@@ -472,7 +526,7 @@ watchEffect(() => {
   <div
     v-if="hoverPost && !isMobile"
     :style="{ top: tooltipPosition.top + 'px', left: tooltipPosition.left + 'px' }"
-    class="fixed bg-black dark:bg-twitch text-white p-2 rounded-2xl shadow-lg max-w-md"
+    class="fixed bg-black dark:bg-twitch text-white p-2 rounded-2xl shadow-lg max-w-md z-50"
   >
     <!-- Верхняя часть всплывающего окна с информацией о посте -->
     <div class="flex flex-wrap gap-1">

@@ -1,5 +1,5 @@
 <template>
-  <div v-if="visible" class="fixed top-16 right-4  text-white p-3 text-sm rounded-3xl shadow-lg max-w-sm bg-black dark:bg-twitch">
+  <div v-if="visible" class="fixed top-16 right-4  text-white p-3 text-sm rounded-3xl shadow-lg max-w-sm bg-black dark:bg-twitch select-none">
     {{ message }}
   </div>
 </template>

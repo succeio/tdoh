@@ -46,3 +46,13 @@ a:hover {
   box-shadow: 0 0 2px #772ce8, 0 0 4px #772ce8, 0 0 8px #772ce8;
   transition: box-shadow 0.3s ease-in-out;
 }
+
+/* Скрыть полосу прокрутки для всех браузеров */
+::-webkit-scrollbar {
+  display: none;
+}
+
+html {
+  scrollbar-width: none;
+  /* Firefox */
+}

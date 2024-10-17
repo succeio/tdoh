@@ -1,5 +1,6 @@
 <script setup>
-import { ref, inject, watch, onMounted } from 'vue'
+import { ref, inject, watch, onMounted} from 'vue'
+import { useRoute, useRouter } from 'vue-router';
 import { database } from '../firebase'
 import { ref as dbRef, push, set, get, update, remove } from 'firebase/database'
 import ErrorNotification from './ErrorNotification.vue';
@@ -7,6 +8,10 @@ import ErrorNotification from './ErrorNotification.vue';
 const errorMessage = ref('');
 const errorTrigger = ref(0); // Триггер для обновления компонента ошибки
 
+//---------- router
+const route = useRoute();
+const router = useRouter();
+//----------- router
 
 ;(function () {
   const devtools = { orientation: false }
@@ -33,8 +38,6 @@ const postText = ref('')
 const postUrl = ref('')
 const postPassword = ref('')
 const hashedString = ref('')
-const threadState = ref('')
-const boardState = ref('')
 const replies = ref([])
 const uId = ref('')
 
@@ -60,12 +63,6 @@ const boards = [
 
 const sendPost = async () => {
   try {
-    threadState.value = localStorage.getItem('threadState')
-      ? localStorage.getItem('threadState')
-      : localStorage.setItem('threadState', '')
-    boardState.value = localStorage.getItem('boardState')
-      ? localStorage.getItem('boardState')
-      : localStorage.setItem('boardState', '')
 
     const response = await fetch('https://api.ipify.org?format=json')
     const data = await response.json()
@@ -73,9 +70,9 @@ const sendPost = async () => {
     uId.value = await hashString(ipAddress); // Хешируем только IP-адрес
 
 //-------
-    console.log()
+
     // Получаем все забаненные объекты
-    const bannedRef = dbRef(database, `banned/${boardState.value}/uIds`);
+    const bannedRef = dbRef(database, `banned/${route.params.board}/uIds`);
     const bannedSnapshot = await get(bannedRef);
     const isBanned = ref(false)
     const banExpiration = ref(null)
@@ -100,7 +97,7 @@ const sendPost = async () => {
         if (currentTime < banExpiration.value) {
           console.log(`uId ${uId.value} забанен до ${new Date(banExpiration.value).toLocaleString()}`);
         } else {
-          const banKeyRef = dbRef(database, `banned/${boardState.value}/uIds/${banKey.value}`);
+          const banKeyRef = dbRef(database, `banned/${route.params.board}/uIds/${banKey.value}`);
           await remove(banKeyRef); // Удаляем объект по ссылке
           isBanned.value = false
         }
@@ -111,11 +108,11 @@ const sendPost = async () => {
 
     if (isBanned.value === false) {
       if (
-        threadState.value &&
-        boardState.value &&
-        boards.some((board) => boardState.value.includes(board))
+        route.params.thread &&
+        route.params.board &&
+        boards.some((board) => route.params.board.includes(board))
       ) {
-        const postId = push(dbRef(database, `${boardState.value}/${threadState.value}`)).key // Генерация уникального ID
+        const postId = push(dbRef(database, `${route.params.board}/${route.params.thread}`)).key // Генерация уникального ID
 
         replies.value = postText.value.match(/#([A-Za-z0-9_-]+)/g)
 
@@ -126,7 +123,7 @@ const sendPost = async () => {
           name: postName.value ? (postName.value.length > 25 ? postName.value.slice(0, 25) : postName.value) : 'Аноним',
           password: postPassword.value ? hashedString.value : '',
           theme: postTheme.value.length < 45 ? postTheme.value : postTheme.value.slice(0, 25),
-          text: (/\s{4,}/.test(postText.value) ? postText.value.replace(/\s{4,}/g, ' ') : postText.value).replace(/[^A-Za-zА-Яа-я0-9\s\w\s.,:;!?'"<>\\//{}$#(@%^&*_+=)-]/g, ''),
+          text: (/\s{4,}/.test(postText.value) ? postText.value.replace(/\s{4,}/g, ' ') : postText.value).replace(/[^A-Za-zА-Яа-я0-9\s\w\s.ё—`,:;!?'"<>\\//{}$#(@%^&*_+=)-]/g, ''),
           url: postUrl.value.length < 100 ? (imgSize.value !== 0 ? (imgSize.value < 4000000 ? postUrl.value : '') : postUrl.value) : '',
           time: new Date().toLocaleTimeString('ru-RU', {
             timeZone: 'Europe/Moscow',
@@ -137,7 +134,7 @@ const sendPost = async () => {
           data: new Date().toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/\//g, '.'),
           day: ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'][new Date().getDay()],
           postId: postId,
-          threadId: threadState.value,
+          threadId: route.params.thread,
           uId: uId.value
         }
 
@@ -149,14 +146,21 @@ const sendPost = async () => {
           if (currentTimeElapsed >= 5000) {
             if (postText.value.length < 450 && selectedEmoji.value === generatedEmoji.value) {
               // Сохраняем новый пост
-              await set(dbRef(database, `${boardState.value}/${threadState.value}/posts/${postId}`), newPost)
+              await set(dbRef(database, `${route.params.board}/${route.params.thread}/posts/${postId}`), newPost)
               localStorage.setItem('tmlg', Date.now())
 
               try {
-                // ----------- Обновление lastPostTimestamp в треде ----------- 
-                await update(dbRef(database, `${boardState.value}/${threadState.value}`), {
-                  lastPostTimestamp: Date.now() // Обновляем только метку времени последнего поста
-                })
+
+                const snapshot = await get(dbRef(database, `${route.params.board}/${route.params.thread}`))
+                if (snapshot.exists()) {
+                  const data = snapshot.val()
+                  if (data.lastPostTimestamp != 9999999999999) {
+                    // ----------- Обновление lastPostTimestamp в треде ----------- 
+                    await update(dbRef(database, `${route.params.board}/${route.params.thread}`), {
+                      lastPostTimestamp: Date.now() // Обновляем только метку времени последнего поста
+                    })
+                  }
+                }
               } catch (err) {
                 console.error(`Ошибка при обновлении метки последнего поста в треде: `, err)
               }
@@ -165,7 +169,7 @@ const sendPost = async () => {
               if (replies.value && replies.value.length) {
                 for (const id of replies.value) {
                   const sId = id.replace('#', '')
-                  const postRef = dbRef(database, `${boardState.value}/${threadState.value}/posts/${sId}`)
+                  const postRef = dbRef(database, `${route.params.board}/${route.params.thread}/posts/${sId}`)
 
                   try {
                     const snapshot = await get(postRef)
@@ -210,16 +214,16 @@ const sendPost = async () => {
             errorTrigger.value++; // Обновляем триггер          
           }
         }
-      } else if (boardState.value && boards.some((board) => boardState.value.includes(board))) {
+      } else if (route.params.board && boards.some((board) => route.params.board.includes(board))) {
         const threadId = push(dbRef(database, 'threads')).key // Генерация уникального ID для нового треда
-        const postId = push(dbRef(database, `${boardState.value}/${threadId}`)).key // Генерация уникального ID для поста
+        const postId = push(dbRef(database, `${route.params.board}/${threadId}`)).key // Генерация уникального ID для поста
 
         hashedString.value = await hashString(postPassword.value)
         const newPost = {
           name: postName.value ? (postName.value.length > 25 ? postName.value.slice(0, 25) : postName.value) : 'Аноним',
           password: postPassword.value ? hashedString.value : '',
           theme: postTheme.value.length < 45 ? postTheme.value : postTheme.value.slice(0, 25),
-          text: (/\s{4,}/.test(postText.value) ? postText.value.replace(/\s{4,}/g, ' ') : postText.value).replace(/[^A-Za-zА-Яа-я0-9\s\w\s.,:;!?'"<>\\//{}$#(@%^&*_+=)-]/g, ''),
+          text: (/\s{4,}/.test(postText.value) ? postText.value.replace(/\s{4,}/g, ' ') : postText.value).replace(/[^A-Za-zА-Яа-я0-9\s\w\sё—`.,:;!?'"<>\\//{}$#(@%^&*_+=)-]/g, ''),
           url: postUrl.value.length < 100 ? postUrl.value : '',
           time: new Date().toLocaleTimeString('ru-RU', {
             timeZone: 'Europe/Moscow',
@@ -241,23 +245,20 @@ const sendPost = async () => {
           const currentTimeElapsed = Date.now() - savedTime
           if (currentTimeElapsed >= 25000) {
             if (postText.value.length < 450 && /\.(jpeg|jpg|gif|png|mp4|webm|ogg)$/i.test(postUrl.value) && selectedEmoji.value === generatedEmoji.value) {
-              await set(dbRef(database, `${boardState.value}/${threadId}/posts/${postId}`), newPost)
+              await set(dbRef(database, `${route.params.board}/${threadId}/posts/${postId}`), newPost)
 
               // ----------- Установка lastPostTimestamp и 0p для нового треда ----------- 
-              await update(dbRef(database, `${boardState.value}/${threadId}`), {
+              await update(dbRef(database, `${route.params.board}/${threadId}`), {
                 lastPostTimestamp: Date.now(), // Обновляем только метку времени последнего поста
                 op: newPost
               })
-
-
-              localStorage.setItem('threadState', threadId)
-              threadState.value = threadId
 
               generateEmojis()
               postText.value = ''
               postUrl.value = ''
               postTheme.value = ''
 
+              router.push({ path: `/${route.params.board}/${threadId}` })
               fetchPosts()
             } else {
               errorMessage.value = 'Пост слишком длинный или не выбран файл! Максимальная длина 450 символов.';
@@ -554,7 +555,7 @@ const addQuote = () => {
       </div>
 
       <!-- Текстовое поле -->
-      <div class="flex flex-col mt-2">
+      <div class="flex flex-col mt-2 relative">
         <textarea
           @keyup.shift.enter="sendPost"
           v-model="postText"
@@ -562,6 +563,18 @@ const addQuote = () => {
           class="w-full text-sm p-2 ring-1 ring-slate-900/10 shadow-sm rounded-md focus:outline-none focus:ring-2 focus:ring-pink-500 caret-pink-500 dark:bg-zinc-800 dark:ring-0 dark:highlight-white/5 dark:focus:ring-2 dark:focus:ring-pink-500 dark:focus:bg-zinc-900 dark:text-white"
           rows="4"
         ></textarea>
+
+        <div
+          :class="{
+            'text-red-500': postText.length > 250,
+            'text-zinc-300': postText.length <= 250,
+            'select-none': true
+          }"
+          class="absolute bottom-2 right-2 text-xs"
+        >
+          {{ postText.length }}/450
+        </div>        
+
       </div>
 
       <!-- Кнопка и управление форматированием -->
@@ -579,7 +592,6 @@ const addQuote = () => {
           >
             Post
           </button>
-
           <div class="flex gap-2 mt-2 lg:mt-0">
             <a href="https://imgur.com/upload" target="_blank" rel="noopener noreferrer">
               <img

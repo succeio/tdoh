@@ -6,7 +6,7 @@ const isScrollDownVisible = ref(false);
 
 const handleScroll = () => {
   isVisible.value = window.scrollY > 400; // 
-  isScrollDownVisible.value = window.scrollY < document.body.scrollHeight - window.innerHeight - 200; // Показывать кнопку "Вниз", если не внизу страницы
+  isScrollDownVisible.value = window.scrollY < document.body.scrollHeight - window.innerHeight - 400; // Показывать кнопку "Вниз", если не внизу страницы
 };
 
 const scrollToTop = () => {
