@@ -161,13 +161,6 @@ const hashString = async (input) => {
   return hashHex.substring(8, 16)
 }
 
-// const openThread = async (thread) => {
-//   //localStorage.setItem('threadState', thread)
-// //  await router.push({ path: `/${thread}` })
-//   await nextTick(); // Ждем обновления
-// //  fetchPosts() - не нужно, потому что отслеживается изменение
-// }
-
 // Проверка, является ли ссылка изображением
 const isImage = computed(() => {
   return /\.(jpeg|jpg|gif|png)$/i.test(props.url)

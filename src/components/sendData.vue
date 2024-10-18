@@ -295,7 +295,6 @@ const loadImg = () => {
         // Обработчик события загрузки изображения
         img.onload = () => {
             imgSize.value = img.width * img.height; // Сохраняем размер изображения
-            console.log(`Размер изображения: ${imgSize.value}`);
         };
 
         // Обработчик события ошибки загрузки изображения
@@ -566,8 +565,8 @@ const addQuote = () => {
 
         <div
           :class="{
-            'text-red-500': postText.length > 250,
-            'text-zinc-300': postText.length <= 250,
+            'text-red-500': postText.length > 450,
+            'text-zinc-300': postText.length <= 450,
             'select-none': true
           }"
           class="absolute bottom-2 right-2 text-xs"

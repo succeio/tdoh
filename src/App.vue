@@ -55,7 +55,6 @@ const fetchPosts = async () => {
 
       // Проверяем, есть ли хотя бы один пост
       if (posts.value.length > 0) {
-        localStorage.setItem('theme', posts.value[0].theme);
         themeState.value = posts.value[0].theme; // Устанавливаем тему
       } else {
         // Если постов нет, очищаем тему
@@ -156,7 +155,7 @@ watch(() => route.params, async (newParams) => {
   await nextTick(); // Ждем обновления
   const { board, thread } = newParams;
   updateStateFromRoute(board, thread);
-  document.title = board ? `🍤 ${board} ${themeState.value}` : `🍤 shrmpch`
+  document.title = board ? `🍤 shrmpch ${board}` : `🍤 shrmpch`
 });
 
 
@@ -209,7 +208,7 @@ watch(posts, (newPosts, oldPosts) => {
 const handleVisibilityChange = () => {
   if (!document.hidden) {
     newPostCount.value = 0 // Сбрасываем счетчик новых постов
-    document.title = `🍤 ${route.params.board}`   // Сбрасываем заголовок
+    document.title = `🍤 shrmpch ${route.params.board}`   // Сбрасываем заголовок
   }
 }
 

@@ -6,7 +6,7 @@ const scrollToTop = () => {
 </script>
 
 <template>
-  <div class="overflow-hidden justify-center text-zinc-600 text-xs bg-white dark:bg-black select-none border-t dark:border-zinc-900 pt-4 pb-4">
+  <div class="overflow-hidden justify-center text-zinc-600 text-xs bg-white dark:bg-black select-none border-t dark:border-zinc-900 pt-2 pb-4">
     
     <!-- Список досок с адаптацией под маленькие экраны -->
     <div @click="scrollToTop" class="flex flex-wrap gap-2 justify-center pt-2 pb-2 overflow-x-auto">

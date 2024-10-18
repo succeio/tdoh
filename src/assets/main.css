@@ -20,8 +20,8 @@ pre {
 
 /* Сброс всех дефолтных стилей для blockquote */
 blockquote {
-  border-left: 2px solid #772ce8;
-  padding-left: 1em;
+  border-left: 4px solid #772ce8;
+  padding-left: 0.5em;
   color: #772ce8;
 }
 
@@ -55,4 +55,43 @@ a:hover {
 html {
   scrollbar-width: none;
   /* Firefox */
+}
+
+ul {
+  list-style: none;
+  /* Убираем стандартные маркеры списка */
+  padding: 0;
+  /* Убираем отступы у списка */
+}
+
+li {
+  position: relative;
+  /* Устанавливаем относительное позиционирование для li */
+  padding-left: 10px;
+  /* Добавляем отступ слева для текста */
+  line-height: 1.5;
+  /* Устанавливаем высоту строки */
+  margin-top: 10px;
+  /* Добавляем отступ сверху для визуального разделения элементов */
+}
+
+li::before {
+  content: "";
+  /* Псевдоэлемент не содержит текста */
+  position: absolute;
+  /* Абсолютное позиционирование */
+  left: 0;
+  /* Позиционируем кружок слева */
+  top: 0;
+  /* Позиционируем кружок вверху */
+  transform: translateY(270%);
+  /* Сдвигаем кружок вниз на половину высоты строки */
+  width: 4px;
+  /* Ширина кружка */
+  height: 4px;
+  /* Высота кружка */
+  background-color: #772ce8;
+  /* Цвет кружка */
+  border-radius: 100%;
+  /* Делаем кружок */
 }
