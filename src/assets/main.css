@@ -54,6 +54,7 @@ a:hover {
 
 html {
   scrollbar-width: none;
+  scroll-behavior: smooth;
   /* Firefox */
 }
 

@@ -2,7 +2,7 @@
 import { ref, provide, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router';
 import { database } from './firebase'
-import { ref as dbRef, onValue, query, get, orderByChild, limitToLast } from 'firebase/database'
+import { ref as dbRef, onValue, query, get, orderByChild, limitToLast, off } from 'firebase/database'
 
 import PostListTemplate from './components/postListTemplate.vue'
 import PostTemplate from './components/postTemplate.vue'
@@ -33,20 +33,23 @@ const startPage = () => {
 
 let unsubscribe = null; // Хранение ссылки на предыдущий слушатель
 
-// Функция для полной загрузки данных onValue
+// Объявляем dataRef
+let dataRef = null; 
+
 const fetchPosts = async () => {
   if (unsubscribe) {
+    off(dataRef); // Отключаем слушателя
     unsubscribe(); // Отписываемся от предыдущего слушателя
   }
 
   posts.value = [];
   threads.value = []; // Очищаем треды, если это необходимо
   await nextTick();
-  
-  const postsRef = dbRef(database, `${route.params.board}/${route.params.thread}/posts`);
 
+  dataRef = dbRef(database, `${route.params.board}/${route.params.thread}/posts`);
+  
   // Используем onValue для подписки на изменения
-  unsubscribe = onValue(postsRef, (snapshot) => { // Используем глобальную переменную unsubscribe
+  unsubscribe = onValue(dataRef, (snapshot) => { 
     const data = snapshot.val();
 
     if (data) {
@@ -72,6 +75,7 @@ const fetchPosts = async () => {
 
 const fetchThreads = async () => {
   if (unsubscribe) {
+    off(dataRef); // Отключаем слушателя
     unsubscribe(); // Отписываемся от предыдущего слушателя
   }
 
@@ -273,7 +277,8 @@ onUnmounted(() => {
         :theme="thread.op.theme"
         :password="thread.op.password"
         :day="thread.op.day"
-        :replies="thread.op.replies" 
+        :replies="thread.op.replies"
+        :mimeType="thread.op.mimeType" 
       />
 
       <!-- Выводим последние 5 постов -->
@@ -292,7 +297,8 @@ onUnmounted(() => {
           :theme="post.theme"
           :password="post.password"
           :day="post.day"
-          :replies="post.replies" 
+          :replies="post.replies"
+          :mimeType="post.mimeType" 
         />
       </div>
     </div>

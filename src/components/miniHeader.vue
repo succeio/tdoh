@@ -5,8 +5,9 @@ const isVisible = ref(false);
 const isScrollDownVisible = ref(false);
 
 const handleScroll = () => {
-  isVisible.value = window.scrollY > 400; // 
-  isScrollDownVisible.value = window.scrollY < document.body.scrollHeight - window.innerHeight - 400; // Показывать кнопку "Вниз", если не внизу страницы
+  isVisible.value = window.scrollY > 400;
+  const isAtBottom = window.scrollY >= document.body.scrollHeight - window.innerHeight;
+  isScrollDownVisible.value = !isAtBottom;
 };
 
 const scrollToTop = () => {
@@ -19,6 +20,11 @@ const scrollToBottom = () => {
 
 onMounted(() => {
   window.addEventListener('scroll', handleScroll);
+  // Принудительно проверяем размеры страницы после загрузки
+  if (document.body.scrollHeight > window.innerHeight) {
+    isScrollDownVisible.value = true; // Кнопка вниз должна отображаться сразу, если страница больше экрана
+  }
+  handleScroll(); // Проверяем положение после загрузки
 });
 
 onBeforeUnmount(() => {
@@ -33,18 +39,25 @@ onBeforeUnmount(() => {
     <button
       v-if="isVisible"
       @click="scrollToTop"
-      class="fixed top-4 right-4 dark:bg-twitch bg-black text-white rounded-2xl min-w-24 p-1 z-50 opacity-15 hover:opacity-25"
+      class="fixed top-6 right-6 dark:bg-twitch text-white rounded-full p-0 z-50 opacity-35 hover:opacity-55"
     >
-      Наверх
+      <img
+        src="../assets/up.svg"
+        alt="Icon"
+        class="h-8 w-8 dark:rounded-full dark:bg-twitch"
+      />
     </button>
 
     <button
       v-if="isScrollDownVisible"
       @click="scrollToBottom"
-      class="fixed bottom-4 right-4 dark:bg-twitch bg-black text-white rounded-2xl min-w-24 p-1 z-50 opacity-15 hover:opacity-25"
+      class="fixed bottom-6 right-6 dark:bg-twitch text-white rounded-full p-0 z-50 opacity-35 hover:opacity-55"
     >
-      Вниз
+      <img
+        src="../assets/down.svg"
+        alt="Icon"
+        class="h-8 w-8 dark:rounded-full dark:bg-twitch"
+      />
     </button>
   </div>
 </template>
-

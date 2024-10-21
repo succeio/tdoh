@@ -1,5 +1,6 @@
 import { initializeApp } from "firebase/app";
 import { getDatabase } from "firebase/database";
+import { getStorage } from "firebase/storage";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDI8O4TAHsGtGI6rEMLSJTnBVzDzclLTWg",
@@ -11,7 +12,13 @@ const firebaseConfig = {
   appId: "1:253643735901:web:9498693474d411bc501eb4"
 };
 
+// Инициализация приложения Firebase
 const app = initializeApp(firebaseConfig);
+
+// Инициализация Realtime Database
 const database = getDatabase(app);
 
-export { database };
+// Инициализация Firebase Storage
+const storage = getStorage(app);
+
+export { database, storage };

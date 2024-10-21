@@ -1,9 +1,302 @@
 <script setup>
-import { ref, inject, watch, onMounted} from 'vue'
+import { ref, inject, watch, onMounted, onUnmounted} from 'vue'
 import { useRoute, useRouter } from 'vue-router';
-import { database } from '../firebase'
+import { database, storage } from '../firebase'
 import { ref as dbRef, push, set, get, update, remove } from 'firebase/database'
+import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage'
 import ErrorNotification from './ErrorNotification.vue';
+
+//storage
+
+const imagePreview = ref(null);
+const mimeType = ref(null); // Сохраняем MIME-тип
+const fileInput = ref(null);
+const maxFileSize = 4 * 1024 * 1024; // Максимальный размер файла: 4MB
+const allowedFormats = ['image/svg+xml', 'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'video/mp4', 'video/webm'];
+
+const handlePaste = async (event) => {
+  const items = event.clipboardData.items;
+  for (let item of items) {
+    const file = item.getAsFile();
+    if (file) {
+      // Проверяем формат и размер файла
+      const error = validateFile(file);
+      if (error) {
+        alert(error); // Выводим ошибку
+      } else {
+        await uploadFile(file);
+      }
+    }
+  }
+};
+
+const handleFileUpload = async (event) => {
+  const file = event.target.files[0];
+  if (file) {
+    // Проверяем формат и размер файла
+    const error = validateFile(file);
+    if (error) {
+      //alert(error); // Выводим ошибку
+    } else {
+      await uploadFile(file);
+    }
+  }
+};
+
+const openFileDialog = () => {
+  fileInput.value.click();
+};
+
+// Функция для проверки формата и размера файла
+const validateFile = (file) => {
+  if (!allowedFormats.includes(file.type)) {
+    errorMessage.value = 'Неподдерживаемый формат файла. Допустимы только изображения и видео (jpeg, png, gif, webp, mp4, webm, svg).';
+    errorTrigger.value++; // Обновляем триггер
+    return
+  }
+  if (file.size > maxFileSize) {
+    errorMessage.value = `Размер файла превышает 4MB. Текущий размер: ${(file.size / 1024 / 1024).toFixed(2)}MB.`;
+    errorTrigger.value++; // Обновляем триггер
+    return 
+  }
+  return null; // Если ошибок нет
+};
+
+const uploadFile = async (file) => {
+  const uniqueFileName = `${Date.now()}-${file.name}`;
+  const storageReference = storageRef(storage, `uploads/${route.params.board}/${route.params.thread}/${uniqueFileName}`);
+
+  // Загружаем файл в Firebase Storage
+  await uploadBytes(storageReference, file);
+
+  // Получаем прямую ссылку на загруженный файл
+  const downloadURL = await getDownloadURL(storageReference);
+  imagePreview.value = downloadURL; // Устанавливаем URL для предпросмотра
+  mimeType.value = file.type; // Сохраняем MIME-тип
+  postUrl.value = downloadURL;
+};
+
+onMounted(() => {
+  window.addEventListener('paste', handlePaste);
+});
+
+onUnmounted(() => {
+  window.removeEventListener('paste', handlePaste);
+});
+
+//---------------------- v2
+
+// const imagePreview = ref(null);
+// const mimeType = ref(null); // Сохраняем MIME-тип
+// const fileInput = ref(null);
+// const maxFileSize = 4 * 1024 * 1024; // Максимальный размер файла: 4MB
+// const allowedFormats = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'video/mp4', 'video/webm'];
+
+// const handlePaste = async (event) => {
+//   const items = event.clipboardData.items;
+//   for (let item of items) {
+//     const file = item.getAsFile();
+//     if (file) {
+//       // Проверяем формат и размер файла
+//       const error = validateFile(file);
+//       if (error) {
+//         alert(error); // Выводим ошибку
+//       } else {
+//         await checkFileExistsAndUpload(file);
+//       }
+//     }
+//   }
+// };
+
+// const handleFileUpload = async (event) => {
+//   const file = event.target.files[0];
+//   if (file) {
+//     // Проверяем формат и размер файла
+//     const error = validateFile(file);
+//     if (error) {
+//       //alert(error); // Выводим ошибку
+//     } else {
+//       await checkFileExistsAndUpload(file);
+//     }
+//   }
+// };
+
+// const openFileDialog = () => {
+//   fileInput.value.click();
+// };
+
+// // Функция для проверки формата и размера файла
+// const validateFile = (file) => {
+//   if (!allowedFormats.includes(file.type)) {
+//     errorMessage.value = 'Неподдерживаемый формат файла. Допустимы только изображения и видео (jpeg, png, gif, webp, mp4, webm).';
+//     errorTrigger.value++; // Обновляем триггер
+//     return;
+//   }
+//   if (file.size > maxFileSize) {
+//     errorMessage.value = `Размер файла превышает 4MB. Текущий размер: ${(file.size / 1024 / 1024).toFixed(2)}MB.`;
+//     errorTrigger.value++; // Обновляем триггер
+//     return;
+//   }
+//   return null; // Если ошибок нет
+// };
+
+// // Функция для проверки существования файла и загрузки, если его нет
+// const checkFileExistsAndUpload = async (file) => {
+//   //const storageReference = storageRef(storage, `uploads/${route.params.board}/${route.params.thread}/${file.name}`);
+//   const storageReference = storageRef(storage, `uploads/${file.name}`);
+
+//   try {
+//     // Проверяем существование файла
+//     await getMetadata(storageReference);
+//     // Если файл существует, получаем его URL
+//     const downloadURL = await getDownloadURL(storageReference);
+//     imagePreview.value = downloadURL; // Устанавливаем URL для предпросмотра
+//     mimeType.value = file.type; // Сохраняем MIME-тип
+//     postUrl.value = downloadURL; // Устанавливаем URL для поста
+//   } catch (error) {
+//     if (error.code === 'storage/object-not-found') {
+//       // Файл не существует, загружаем его
+//       await uploadFile(file);
+//     } else {
+//       console.error('Ошибка при проверке существования файла:', error);
+//     }
+//   }
+// };
+
+// const uploadFile = async (file) => {
+//   //const storageReference = storageRef(storage, `uploads/${route.params.board}/${route.params.thread}/${file.name}`);
+//   const storageReference = storageRef(storage, `uploads/${file.name}`);
+//   // Загружаем файл в Firebase Storage
+//   await uploadBytes(storageReference, file);
+
+//   // Получаем прямую ссылку на загруженный файл
+//   const downloadURL = await getDownloadURL(storageReference);
+//   imagePreview.value = downloadURL; // Устанавливаем URL для предпросмотра
+//   mimeType.value = file.type; // Сохраняем MIME-тип
+//   postUrl.value = downloadURL; // Устанавливаем URL для поста
+// };
+
+// onMounted(() => {
+//   window.addEventListener('paste', handlePaste);
+// });
+
+// onUnmounted(() => {
+//   window.removeEventListener('paste', handlePaste);
+// });
+
+//-----------v3 тут как бы если есть файл с таким же названием, то передается его ссылка, проблемы возникают с image из буфера
+
+// const imagePreview = ref(null);
+// const mimeType = ref(null); // Сохраняем MIME-тип
+// const fileInput = ref(null);
+// const maxFileSize = 4 * 1024 * 1024; // Максимальный размер файла: 4MB
+// const allowedFormats = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'video/mp4', 'video/webm'];
+
+// const handlePaste = async (event) => {
+//   event.clipboardData.clearData(); // Сбрасываем данные буфера обмена
+//   const items = event.clipboardData.items;
+//   let foundFile = false;
+
+//   for (let item of items) {
+//     const file = item.getAsFile();
+//     if (file) {
+//       foundFile = true;
+//       console.log('Получен файл из буфера обмена:', file);
+//       imagePreview.value = null;
+//       mimeType.value = null;
+
+//       const error = validateFile(file);
+//       if (error) {
+//         alert(error);
+//       } else {
+//         await checkFileExistsAndUpload(file);
+//       }
+//     }
+//   }
+
+//   if (!foundFile) {
+//     console.log('Файл не найден в буфере обмена');
+//     imagePreview.value = null;
+//     mimeType.value = null;
+//   }
+// };
+
+
+// const handleFileUpload = async (event) => {
+//   const file = event.target.files[0];
+//   if (file) {
+//     // Очищаем данные предыдущего файла
+//     imagePreview.value = null;
+//     mimeType.value = null;
+
+//     // Проверяем формат и размер файла
+//     const error = validateFile(file);
+//     if (error) {
+//       alert(error); // Выводим ошибку
+//     } else {
+//       await checkFileExistsAndUpload(file);
+//     }
+//   }
+// };
+
+// const openFileDialog = () => {
+//   fileInput.value.click();
+// };
+
+// // Функция для проверки формата и размера файла
+// const validateFile = (file) => {
+//   if (!allowedFormats.includes(file.type)) {
+//     return 'Неподдерживаемый формат файла. Допустимы только изображения и видео (jpeg, png, gif, webp, mp4, webm).';
+//   }
+//   if (file.size > maxFileSize) {
+//     return `Размер файла превышает 4MB. Текущий размер: ${(file.size / 1024 / 1024).toFixed(2)}MB.`;
+//   }
+//   return null; // Если ошибок нет
+// };
+
+// // Функция для проверки существования файла и загрузки, если его нет
+// const checkFileExistsAndUpload = async (file) => {
+//   const storageReference = storageRef(storage, `uploads/${file.name}`);
+
+//   try {
+//     // Проверяем существование файла
+//     await getMetadata(storageReference);
+//     // Если файл существует, получаем его URL
+//     const downloadURL = await getDownloadURL(storageReference);
+//     imagePreview.value = downloadURL; // Устанавливаем URL для предпросмотра
+//     mimeType.value = file.type; // Сохраняем MIME-тип
+//     postUrl.value = downloadURL; // Устанавливаем URL для поста
+//   } catch (error) {
+//     if (error.code === 'storage/object-not-found') {
+//       // Файл не существует, загружаем его
+//       await uploadFile(file);
+//     } else {
+//       console.error('Ошибка при проверке существования файла:', error);
+//     }
+//   }
+// };
+
+// const uploadFile = async (file) => {
+//   const storageReference = storageRef(storage, `uploads/${file.name}`);
+//   // Загружаем файл в Firebase Storage
+//   await uploadBytes(storageReference, file);
+
+//   // Получаем прямую ссылку на загруженный файл
+//   const downloadURL = await getDownloadURL(storageReference);
+//   imagePreview.value = downloadURL; // Устанавливаем URL для предпросмотра
+//   mimeType.value = file.type; // Сохраняем MIME-тип
+//   postUrl.value = downloadURL; // Устанавливаем URL для поста
+// };
+
+// onMounted(() => {
+//   window.addEventListener('paste', handlePaste);
+// });
+
+// onUnmounted(() => {
+//   window.removeEventListener('paste', handlePaste);
+// });
+
+
 
 const errorMessage = ref('');
 const errorTrigger = ref(0); // Триггер для обновления компонента ошибки
@@ -40,6 +333,7 @@ const postPassword = ref('')
 const hashedString = ref('')
 const replies = ref([])
 const uId = ref('')
+
 
 const imgSize = ref(0)
 
@@ -124,7 +418,7 @@ const sendPost = async () => {
           password: postPassword.value ? hashedString.value : '',
           theme: postTheme.value.length < 45 ? postTheme.value : postTheme.value.slice(0, 25),
           text: (/\s{4,}/.test(postText.value) ? postText.value.replace(/\s{4,}/g, ' ') : postText.value).replace(/[^A-Za-zА-Яа-я0-9\s\w\s.ё—`,:;!?'"<>\\//{}$#(@%^&*_+=)-]/g, ''),
-          url: postUrl.value.length < 100 ? (imgSize.value !== 0 ? (imgSize.value < 4000000 ? postUrl.value : '') : postUrl.value) : '',
+          url: postUrl.value,
           time: new Date().toLocaleTimeString('ru-RU', {
             timeZone: 'Europe/Moscow',
             hour: '2-digit',
@@ -135,7 +429,8 @@ const sendPost = async () => {
           day: ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'][new Date().getDay()],
           postId: postId,
           threadId: route.params.thread,
-          uId: uId.value
+          uId: uId.value,
+          mimeType: typeof mimeType.value === 'string' ? mimeType.value : ''
         }
 
         const savedTime = localStorage.getItem('tmlg')
@@ -148,6 +443,7 @@ const sendPost = async () => {
               // Сохраняем новый пост
               await set(dbRef(database, `${route.params.board}/${route.params.thread}/posts/${postId}`), newPost)
               localStorage.setItem('tmlg', Date.now())
+              imagePreview.value = ""
 
               try {
 
@@ -224,7 +520,7 @@ const sendPost = async () => {
           password: postPassword.value ? hashedString.value : '',
           theme: postTheme.value.length < 45 ? postTheme.value : postTheme.value.slice(0, 25),
           text: (/\s{4,}/.test(postText.value) ? postText.value.replace(/\s{4,}/g, ' ') : postText.value).replace(/[^A-Za-zА-Яа-я0-9\s\w\sё—`.,:;!?'"<>\\//{}$#(@%^&*_+=)-]/g, ''),
-          url: postUrl.value.length < 100 ? postUrl.value : '',
+          url: postUrl.value.length < 1000 ? postUrl.value : '',
           time: new Date().toLocaleTimeString('ru-RU', {
             timeZone: 'Europe/Moscow',
             hour: '2-digit',
@@ -235,7 +531,8 @@ const sendPost = async () => {
           day: ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'][new Date().getDay()],
           postId: postId,
           threadId: threadId,
-          uId: uId.value
+          uId: uId.value,
+          mimeType: typeof mimeType.value === 'string' ? mimeType.value : ''
         }
 
         const savedTime = localStorage.getItem('tmlg')
@@ -244,8 +541,9 @@ const sendPost = async () => {
         if (savedTime) {
           const currentTimeElapsed = Date.now() - savedTime
           if (currentTimeElapsed >= 25000) {
-            if (postText.value.length < 450 && /\.(jpeg|jpg|gif|png|mp4|webm|ogg)$/i.test(postUrl.value) && selectedEmoji.value === generatedEmoji.value) {
+            if (postText.value.length < 450 && (/\.(jpeg|jpg|gif|png|mp4|webm|ogg)$/i.test(postUrl.value) || postUrl.value.includes('fire') ) && selectedEmoji.value === generatedEmoji.value) {
               await set(dbRef(database, `${route.params.board}/${threadId}/posts/${postId}`), newPost)
+              imagePreview.value = ""
 
               // ----------- Установка lastPostTimestamp и 0p для нового треда ----------- 
               await update(dbRef(database, `${route.params.board}/${threadId}`), {
@@ -554,8 +852,9 @@ const addQuote = () => {
       </div>
 
       <!-- Текстовое поле -->
-      <div class="flex flex-col mt-2 relative">
-        <textarea
+      <div class="flex flex-col mt-2">
+        <div class="relative">
+<textarea
           @keyup.shift.enter="sendPost"
           v-model="postText"
           placeholder="post"
@@ -572,7 +871,19 @@ const addQuote = () => {
           class="absolute bottom-2 right-2 text-xs"
         >
           {{ postText.length }}/450
-        </div>        
+        </div>          
+      </div>
+              
+  <div 
+    class="w-full p-4 border-dashed border border-gray-300 rounded-md  hover:cursor-pointer text-zinc-500 text-sm"
+    @click="openFileDialog"
+  >
+    <input type="file" ref="fileInput" @change="handleFileUpload" style="display: none;" />
+    <p v-show="!imagePreview">Нажмите или вставьте изображение из буфера</p>
+    <img v-if="imagePreview && /svg|jpeg|jpg|gif|png|JPG|JPEG|GIF|PNG|SVG/.test(postUrl)" :src="imagePreview" alt="Preview" class=" w-1/3 h-auto rounded-2xl" />
+    <video v-if="imagePreview && /mp4|webm|ogg/.test(postUrl)" :src="imagePreview"  class=" w-1/3 h-auto rounded-2xl"></video>
+   
+  </div>
 
       </div>
 
@@ -585,12 +896,22 @@ const addQuote = () => {
             class="w-full lg:flex-1 text-sm p-2 ring-1 ring-slate-900/10 shadow-sm rounded-md focus:outline-none focus:ring-2 focus:ring-pink-500 caret-pink-500 dark:bg-zinc-800 dark:ring-0 dark:highlight-white/5 dark:focus:ring-2 dark:focus:ring-pink-500 dark:focus:bg-zinc-900 dark:text-white"
             type="text"
           />
+
+           <button v-if="imagePreview"
+            @click="imagePreview = '', postUrl = ''"
+            class="dark:bg-twitch bg-black text-white rounded-full p-1 w-full lg:w-8"
+          >
+            X
+          </button>          
+
+
           <button
             @click="sendPost"
             class="dark:bg-twitch bg-black text-white rounded-2xl p-1 w-full lg:min-w-32 lg:w-auto"
           >
             Post
           </button>
+
           <div class="flex gap-2 mt-2 lg:mt-0">
             <a href="https://imgur.com/upload" target="_blank" rel="noopener noreferrer">
               <img

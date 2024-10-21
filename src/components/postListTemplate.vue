@@ -23,6 +23,7 @@ defineProps({
     :password="post.password"
     :day="post.day"
     :replies="post.replies"
+    :mimeType="post.mimeType"
     />
 
   </div>

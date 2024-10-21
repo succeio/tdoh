@@ -5,7 +5,6 @@ import { computed, ref, inject, onMounted, onBeforeUnmount, watchEffect} from 'v
 import { useRoute } from 'vue-router';
 import { VueShowdown } from 'vue-showdown'
 
-//const fetchPosts = inject('fetchPosts')
 const getPostId = inject('getPostId')
 
 //---------- router
@@ -19,6 +18,7 @@ const props = defineProps({
   data: String,
   name: String,
   url: String,
+  mimeType: String,
   text: String,
   password: String,
   day: String,
@@ -163,13 +163,25 @@ const hashString = async (input) => {
 
 // Проверка, является ли ссылка изображением
 const isImage = computed(() => {
-  return /\.(jpeg|jpg|gif|png)$/i.test(props.url)
-})
+  // Проверка на наличие 'image' в URL
 
-// Проверка, является ли ссылка видео
+  // Проверяем существование props.mimeType перед вызовом startsWith
+  const isMimeTypeImage = props.mimeType && typeof props.mimeType === 'string' && props.mimeType.startsWith('image/');
+  
+  // Проверяем, что props.url существует и является строкой
+  const isUrlImage = props.url && typeof props.url === 'string' && /\.(jpeg|jpg|gif|png)$/i.test(props.url);
+  
+  return isMimeTypeImage || isUrlImage;
+});
+
 const isVideo = computed(() => {
-  return /\.(mp4|webm|ogg)$/i.test(props.url)
-})
+   // Проверка по MIME-типу и расширению файла
+  const isMimeTypeVideo = props.mimeType && typeof props.mimeType === 'string' && props.mimeType.startsWith('video/');
+  const isUrlVideo = props.url && typeof props.url === 'string' && /\.(mp4|webm|ogg)$/i.test(props.url);
+
+  return isMimeTypeVideo || isUrlVideo;
+});
+
 
 const isSoundCloud = computed(() => {
   return /api\.soundcloud\.com/i.test(props.url);  
@@ -328,9 +340,53 @@ onBeforeUnmount(() => {
 
 const isEnlarged = ref(false); // Using the Composition API
 
-const toggleImageSize = () => {
-  isEnlarged.value = !isEnlarged.value; // Toggle the state
+const videoElement = ref(null); // Референс на видео элемент
+
+// const toggleImageSize = () => {
+//   isEnlarged.value = !isEnlarged.value; // Toggle the state
+
+//     if (videoElement.value) {
+//     if (!isEnlarged.value) {
+//       videoElement.value.play();  // Воспроизводим, если увеличено
+//     } else {
+//       videoElement.value.pause(); // Останавливаем, если уменьшено
+//     }
+//   }
+// };
+
+const toggleImageSize = async () => {
+  isEnlarged.value = !isEnlarged.value; // Переключаем состояние
+  const video = videoElement.value; // Получаем видео элемент
+
+  if (!video) {
+    //console.error("Video element is null");
+    return; // Если видео элемента нет, ничего не делаем
+  }
+
+  if (!isEnlarged.value) {
+    try {
+      await video.play(); // Пробуем воспроизвести видео
+    } catch (error) {
+      if (error.name === 'AbortError') {
+        console.warn('Video play request was interrupted.');
+      } else {
+        console.error('Error playing video:', error);
+      }
+    }
+  } else {
+    video.pause(); // При сворачивании останавливаем воспроизведение
+  }
 };
+
+const handleVideoEnded = () => {
+  isEnlarged.value = false; // Сбрасываем состояние на уменьшенное
+  const video = videoElement.value;
+  
+  if (video) {
+    video.pause(); // Останавливаем видео
+  }
+};
+
 
 const isMobile = ref(false); // Флаг для мобильных устройств
 
@@ -435,27 +491,31 @@ watchEffect(() => {
 
     <div class="gap-2 flex flex-col sm:flex-row">
       <div v-show="props.url"  class="gap-2 mt-2 relative">
-        <img
-          v-if="isImage"
-          :class="[
-            'transition-all duration-150 bg-white rounded-2xl cursor-pointer',
-            isEnlarged ? 'w-80 sm:max-w-2xl' : 'w-48 sm:max-w-xs'
-          ]"
-          :src="url"
-          alt="post-pic"
-          @click="toggleImageSize"
-        />
+  <img
+    v-if="isImage"
+    :class="[ 
+      'transition-all duration-150 bg-white rounded-2xl cursor-pointer',
+      //isEnlarged ? 'w-80 sm:max-w-2xl' : 'w-48 sm:max-w-xs'
+      isEnlarged ? 'w-full sm:max-w-2xl' : 'w-48 sm:max-w-xs'
+    ]"
+    :src="url"
+    alt="post-pic"
+    @click="toggleImageSize"
+  />
 
-        <video
-          v-if="isVideo"
-          :class="[
-            'transition-all duration-150 bg-white rounded-2xl cursor-pointer',
-            isEnlarged ? 'w-80 sm:max-w-2xl' : 'w-48 sm:max-w-xs'
-          ]"
-          :src="url"
-          controls
-          @click="toggleImageSize"
-        ></video>
+  <video
+    v-if="isVideo"
+    ref="videoElement"  
+    :class="[
+      'transition-all duration-150 bg-white rounded-2xl cursor-pointer',
+      isEnlarged ? 'w-full sm:max-w-2xl' : 'w-full sm:max-w-xs'
+    ]"
+    :src="url"
+    controls
+    volume="0.1"
+    @click="toggleImageSize"
+    @ended="handleVideoEnded"
+  ></video>
 
         <iframe
           class="rounded-2xl w-full"
@@ -532,7 +592,7 @@ watchEffect(() => {
     </div>
 
     <!-- Текст поста -->
-    <div>
+    <div>      
       <p class="pl-4 pt-2 pb-2">{{ hoverPost.text }}</p>
     </div>
   </div>
