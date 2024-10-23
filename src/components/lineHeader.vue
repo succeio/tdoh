@@ -1,9 +1,9 @@
 <script setup>
-import { inject } from 'vue'
+//import { inject } from 'vue'
 import { useRouter, useRoute } from 'vue-router';
 import DarkModeSwitcher from './darkModeSwitcher.vue'
 
-const startPage = inject('startPage')
+//const startPage = inject('startPage')
 
 const route = useRoute();
 useRouter();
@@ -20,7 +20,14 @@ defineProps({
   >
     <!-- Левая часть: логотип и текущая доска/тема -->
     <div class="flex gap-10">
-      <div @click="startPage" class="cursor-pointer select-none">🍤 shrmpch</div>
+      <router-link 
+        :to="`/`" 
+        class="hover:text-white no-underline hover:no-underline text-white cursor-pointer select-none "
+      >
+        🍤 shrmpch
+      </router-link>
+
+
       <router-link 
         :to="`/${route.params.board}`" 
         class="hover:text-white no-underline hover:no-underline text-white cursor-pointer select-none "

@@ -4,6 +4,11 @@ import App from '../App.vue';
 
 const routes = [
   {
+    path: '/',
+    name: 'home',
+    component: App, // Замените на ваш компонент главной страницы
+  },
+  {
     path: '/:board?/:thread?', // Параметры URL: boardState обязательно, threadState опционально
     name: 'id',
     component: App,
