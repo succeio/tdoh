@@ -528,7 +528,7 @@ const sendPost = async () => {
             errorTrigger.value++; // Обновляем триггер          
           }
         }
-      } else if (route.params.board && boards.some((board) => route.params.board.includes(board))) {
+      } else if (route.params.board && boards.includes(route.params.board)) {
         const threadId = push(dbRef(database, 'threads')).key // Генерация уникального ID для нового треда
         const postId = push(dbRef(database, `${route.params.board}/${threadId}`)).key // Генерация уникального ID для поста
 
@@ -585,6 +585,9 @@ const sendPost = async () => {
             errorTrigger.value++; // Обновляем триггер
           }
         }
+      } else {
+        errorMessage.value = `Раздел не существует.`
+        errorTrigger.value++; // Обновляем триггер        
       }
     } else {
       errorMessage.value = `Забанен до ${new Date(banExpiration.value).toLocaleString()}`
